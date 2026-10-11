@@ -16,14 +16,14 @@ Pipeline per run: insert a row into `etl.load_batch`, land API responses in `raw
 
 ## Loading without the live API
 
-`pokeapi.co` is blocked from the cloud environment, but PokeAPI publishes every API response as static JSON in the git repo `github.com/PokeAPI/api-data` (`data/api/v2/<endpoint>/<id>/index.json`), which can be cloned. `tools/dump_to_csv.py` turns a checkout into one CSV shaped like `raw.api_response`, and `tools/land.sql` lands it with a single `\copy`. That is a bulk backfill; the live API is then only needed for incremental refreshes.
+`pokeapi.co` is blocked from the cloud environment, but PokeAPI publishes every API response as static JSON in the git repo `github.com/PokeAPI/api-data` (`data/api/v2/<endpoint>/<id>/index.json`), which can be cloned. `tools/dump_to_csv.py` turns a checkout into one CSV shaped like `raw.api_response`, and `tools/land.sql` lands it with a single `\copy`. Landing is safe to rerun: only new or changed resources get a row, the old version stays as history with `is_current = false`, and the whole load is one transaction. That is a bulk backfill; the live API is then only needed for incremental refreshes.
 
 ```
 git clone --depth 1 --filter=blob:none --sparse https://github.com/PokeAPI/api-data.git
 cd api-data && git sparse-checkout set data/api/v2/<endpoint> ...   # the 21 endpoints staging reads
 python3 tools/dump_to_csv.py api-data/data/api/v2 raw.csv
-psql -d pokeplan -f tools/land.sql        # edit the CSV path inside first
-psql -d pokeplan -c 'CALL mart.load(1)'
+psql -d pokeplan -At -v csv="$PWD/raw.csv" -f tools/land.sql   # prints the new batch_id
+psql -d pokeplan -c 'CALL mart.load(<batch_id>)'
 ```
 
 Endpoints staging reads: generation, version-group, version, region, pokedex, type, stat, ability, move, machine, item, location, location-area, pokemon-species, pokemon, pokemon-form, evolution-chain, move-learn-method, encounter-method, encounter-condition-value, evolution-trigger.
