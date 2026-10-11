@@ -14,7 +14,7 @@ indeg={}
 for e in d["endpoints"]:
     for x in e["references_endpoints"]: indeg[x]=indeg.get(x,0)+1
 import os
-notes_path=os.path.join(os.path.dirname(os.path.abspath(__file__)),"domain","endpoint_notes.json")
+notes_path=os.path.join(os.path.dirname(os.path.abspath(__file__)),"..","domain","endpoint_notes.json")
 notes=json.load(open(notes_path)) if os.path.exists(notes_path) else {}
 data={"groups":groups,"eps":eps,"indeg":indeg,"conv":d["conventions"],"notes":notes}
 tpl=open(sys.argv[2]).read()

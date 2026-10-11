@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Runs the whole local pipeline end to end and writes dashboard_data.json.
+# Runs the whole local pipeline end to end and writes dashboard/dashboard_data.json.
 #   extract   sparse-clone PokeAPI/api-data (the 21 endpoints staging reads)
 #   land      dump to CSV, then schema/tools/land.sql (only new or changed rows)
 #   transform CALL mart.load(batch)
 #   test      06_tests.sql; any failing check stops the run
-#   serve     08_serve.sql views, then export JSON for the dashboard
+#   serve     schema/08_serve.sql views, then export JSON for the dashboard
 # Needs: git, python3, psql pointed at a database via PG* env vars.
 # Safe to rerun: an unchanged dump lands no new raw rows.
 set -euo pipefail
-here=$(cd "$(dirname "$0")" && pwd)
-schema="$here/../schema"
+root=$(cd "$(dirname "$0")/.." && pwd)
+schema="$root/schema"
+dashboard="$root/dashboard"
 work=${WORK:-$(mktemp -d)}
 export PGOPTIONS="${PGOPTIONS:-} -c client_min_messages=warning"  # hide 'already exists' notices on reruns
 psql_() { psql -v ON_ERROR_STOP=1 -q "$@"; }
@@ -50,6 +51,6 @@ fi
 psql_ -c "UPDATE etl.load_batch SET status='succeeded', finished_at=now() WHERE batch_id=$batch"
 
 echo "serve: exporting dashboard data"
-psql_ -f "$here/08_serve.sql" >/dev/null
-psql -Atq -f "$here/export_dashboard.sql" > "$here/dashboard_data.json"
+psql_ -f "$schema/08_serve.sql" >/dev/null
+psql -Atq -f "$dashboard/export_dashboard.sql" > "$dashboard/dashboard_data.json"
 echo "done: batch $batch, commit $commit"

@@ -2,6 +2,8 @@
 api-data/
 *.csv
 raw/
+# Rebuilt by every pipeline run; pokedex_dashboard.html keeps a snapshot of it
+dashboard/dashboard_data.json
 
 # Terraform
 .terraform/
