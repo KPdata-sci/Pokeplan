@@ -26,12 +26,16 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: postgres
       PGDATABASE: pokeplan
-      WORK: ${{ runner.temp }}/pokeplan
     steps:
       - uses: actions/checkout@v4
 
+      # Keep the api-data clone between the two runs (the runner context is
+      # not available in job-level env, so set WORK here).
+      - name: Set work folder
+        run: mkdir -p "$RUNNER_TEMP/pokeplan" && echo "WORK=$RUNNER_TEMP/pokeplan" >> "$GITHUB_ENV"
+
       - name: First run (extract, land, transform, test, serve)
-        run: mkdir -p "$WORK" && bash pipeline/run_pipeline.sh
+        run: bash pipeline/run_pipeline.sh
 
       - name: Second run must land nothing new
         run: |
