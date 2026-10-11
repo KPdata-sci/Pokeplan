@@ -1,0 +1,199 @@
+<title>PokeAPI v2 Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sticky endpoint index on the left, long reference column on the right; stacks on phones */
+:root{
+  --bg:#f6f7f8; --panel:#ffffff; --fg:#1b2127; --muted:#5d6874; --line:#dde2e7;
+  --accent:#0f6e8c; --accent-soft:#e1f0f5; --warn:#9a5b00; --warn-soft:#fbefdc; --code-bg:#eef1f4;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Source Sans 3",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12171c; --panel:#1a2128; --fg:#e4e9ee; --muted:#9aa6b2; --line:#2c353e;
+  --accent:#5cc2e0; --accent-soft:#163541; --warn:#f0b55e; --warn-soft:#3a2b14; --code-bg:#20282f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171c; --panel:#1a2128; --fg:#e4e9ee; --muted:#9aa6b2; --line:#2c353e;
+  --accent:#5cc2e0; --accent-soft:#163541; --warn:#f0b55e; --warn-soft:#3a2b14; --code-bg:#20282f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.55}
+a{color:var(--accent)}
+code,.mono{font-family:var(--f-mono);font-size:.86em}
+code{background:var(--code-bg);padding:.1em .35em;border-radius:4px}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:28px 64px}
+header.top{display:flex;flex-direction:column;gap:8px;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:24px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:24px;font-weight:800}
+h3{font-size:19px;font-weight:600}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+.base{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+.base code{font-size:15px;padding:.3em .6em}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:32px}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);align-self:start;max-height:calc(100vh - 24px);overflow:auto;font-size:14px;padding-right:4px}
+nav.toc input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);font:inherit;margin-bottom:12px}
+nav.toc input:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toc-g{margin-bottom:10px}
+.toc-g b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px}
+.toc-g a{display:block;text-decoration:none;color:var(--fg);padding:1px 0 1px 8px;border-left:2px solid transparent;font-family:var(--f-mono);font-size:12.5px}
+.toc-g a:hover{border-left-color:var(--accent);color:var(--accent)}
+main{min-width:0;display:flex;flex-direction:column;gap:40px}
+.intro{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.fact{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;min-width:0}
+.fact h3{font-size:16px;margin-bottom:6px}
+.fact p,.fact ul{margin:0;color:var(--fg)}
+.fact ul{padding-left:18px}
+.fact .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.pipe{background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:18px 20px}
+.pipe ol{margin:8px 0 0;padding-left:22px;display:grid;gap:6px;max-width:90ch}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+.hubs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.group-h{display:flex;align-items:baseline;gap:10px;border-bottom:2px solid var(--fg);padding-bottom:6px;margin-bottom:4px}
+.group-h span{color:var(--muted);font-size:14px}
+.res{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-width:0;scroll-margin-top:16px}
+.res-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.path{font-family:var(--f-mono);font-size:14px;background:var(--code-bg);padding:3px 8px;border-radius:5px;overflow-wrap:anywhere}
+.chip{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.desc{margin:0;color:var(--fg);max-width:85ch}
+.dnote{margin:0;max-width:85ch;background:var(--warn-soft);border-radius:6px;padding:10px 14px;display:grid;gap:4px}
+.dnote .lbl{font:600 .72rem/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
+.refs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.refs .lbl{color:var(--muted);margin-right:2px}
+.ref{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:5px;padding:1px 7px;text-decoration:none;color:var(--fg);background:var(--bg)}
+.ref:hover{border-color:var(--accent);color:var(--accent)}
+.ref.in{border-style:dashed}
+.model{min-width:0}
+.model h4{margin:6px 0 4px;font-family:var(--f-mono);font-size:13.5px;font-weight:600}
+.model h4 small{font-family:var(--f-body);font-weight:400;color:var(--muted);margin-left:6px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:6px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--bg);font-weight:600}
+td.f{font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+td.t{font-family:var(--f-mono);font-size:12.5px;color:var(--accent);white-space:nowrap}
+td.t a{text-decoration:none}
+details summary{cursor:pointer;color:var(--muted);font-size:14px}
+pre{background:var(--code-bg);border-radius:6px;padding:12px;overflow:auto;max-height:420px;font-family:var(--f-mono);font-size:12.5px;line-height:1.45;margin:8px 0 0}
+.empty{color:var(--muted)}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}nav.toc{position:static;max-height:none}.toc-groups{display:none}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>PokeAPI v2 Field Guide</h1>
+    <p class="lede">Every endpoint, object and field in the PokeAPI v2 documentation, arranged as the source reference for our ingestion pipeline. Built from the docs source on 8 Oct 2026. Yellow "In the games" notes add what the docs leave out; the <a href="https://claude.ai/artifact/D1vpWbwT6wvCJVb66M8EKs">Pokémon Domain Guide</a> explains them.</p>
+    <div class="base"><span class="k mono">Base URL</span><code>https://pokeapi.co/api/v2/</code></div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Endpoints">
+      <label for="q" class="k" style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Filter endpoints and fields</label>
+      <input id="q" type="search" placeholder="e.g. evolution, base_experience" autocomplete="off">
+      <div class="toc-groups" id="toc"></div>
+    </nav>
+
+    <main>
+      <section aria-labelledby="how">
+        <h2 id="how" style="margin-bottom:14px">How the API works</h2>
+        <div class="intro">
+          <div class="fact"><h3>Read only, no auth</h3><p>Only <code>GET</code> exists. No API key, no login. Every resource is public.</p></div>
+          <div class="fact"><h3>Rate limit and fair use</h3><p>No rate limit since the move to static hosting in November 2018. The fair use policy still applies: cache resources locally every time you request them. Abusive clients get their IP permanently banned.</p></div>
+          <div class="fact"><h3>Resource lists and pagination</h3><p>Call any endpoint without an id or name, e.g. <code>/ability/</code>, to get a page of up to <b>20</b> results. Change size with <code>?limit=60</code> and move with <code>&amp;offset=60</code>. The response carries <code>count</code>, <code>next</code>, <code>previous</code> and <code>results</code>.</p></div>
+          <div class="fact"><h3>Named vs unnamed</h3><p>Most endpoints accept <code>{id or name}</code> and list results as <code>{name, url}</code>. Five are unnamed and take only an id, listing <code>{url}</code>: <span id="unnamed"></span>.</p></div>
+          <div class="fact"><h3>Links between resources</h3><p>Related objects arrive as a <code>NamedAPIResource</code> (<code>name</code> + <code>url</code>) or <code>APIResource</code> (<code>url</code>). The url always ends in <code>/{id}/</code>, which is the foreign key.</p></div>
+          <div class="fact"><h3>Shape quirks</h3><p><code>/pokemon/{id}/encounters</code> returns a JSON <b>array</b>, not an object; its URL comes from <code>pokemon.location_area_encounters</code>. Translated text (names, flavor text, effects) arrives as lists tagged with a <code>language</code>.</p></div>
+        </div>
+      </section>
+
+      <section class="pipe" aria-labelledby="pipe">
+        <h2 id="pipe">Reading this as a pipeline source</h2>
+        <ol>
+          <li><b>Extract.</b> For each endpoint, page the list with <code>limit</code> and <code>offset</code> (follow <code>next</code> until it is null), then fetch each detail URL.</li>
+          <li><b>Land raw.</b> Store every response as-is, keyed by endpoint and id. This is the fair-use cache and makes re-runs idempotent.</li>
+          <li><b>Normalize.</b> Turn each <code>NamedAPIResource</code> into a foreign key by parsing the id from its url. Explode lists such as <code>names</code>, <code>flavor_text_entries</code> and <code>version_details</code> into child tables.</li>
+          <li><b>Model.</b> The reference graph below each endpoint shows what it points to and what points at it. The most-referenced endpoints are the natural dimension tables:</li>
+        </ol>
+        <div class="hubs" id="hubs"></div>
+        <p class="note">Steps 1 to 4 are my recommendations for our pipeline, inferred from the docs. They are not part of the PokeAPI documentation itself.</p>
+      </section>
+
+      <div id="groups"></div>
+      <p id="nores" class="empty" hidden>No endpoints or fields match that filter.</p>
+    </main>
+  </div>
+</div>
+
+<script>
+const D = __DATA__;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const md = s => esc(s).replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" rel="noopener" target="_blank">$1</a>').replace(/`([^`]+)`/g,"<code>$1</code>");
+const slug = s => "ep-" + String(s).replace(/[^a-z0-9]+/gi,"-").replace(/-+$/,"");
+// model name -> anchor of the resource that documents it
+const modelAnchor = {};
+D.groups.forEach(g => g.r.forEach(r => r.m.forEach(m => { if(!(m.n in modelAnchor)) modelAnchor[m.n] = slug(r.ep && r.ep!=="{endpoint}" ? r.req : r.t) + "--" + m.n; })));
+const typeHtml = t => esc(t).replace(/([A-Z][A-Za-z]+)/g, n => modelAnchor[n] ? `<a href="#${modelAnchor[n]}">${n}</a>` : n);
+const inbound = {};
+Object.values(D.eps).forEach(e => e.references_endpoints.forEach(x => (inbound[x] ||= []).push(e.endpoint)));
+const epAnchor = ep => slug(D.eps[ep] ? "/v2" + D.eps[ep].path : ep);
+
+document.getElementById("unnamed").innerHTML = D.conv.unnamed_endpoints.map(e => `<a href="#${epAnchor(e)}"><code>${e}</code></a>`).join(", ");
+document.getElementById("hubs").innerHTML = Object.entries(D.indeg).sort((a,b)=>b[1]-a[1]).slice(0,10)
+  .map(([k,v]) => `<a class="ref" href="#${epAnchor(k)}">${k} <span style="color:var(--muted)">← ${v}</span></a>`).join("");
+
+let toc = "", out = "";
+D.groups.forEach((g, gi) => {
+  toc += `<div class="toc-g" data-g="${gi}"><b>${esc(g.n)}</b>`;
+  out += `<section class="grp" data-g="${gi}"><div class="group-h"><h2>${esc(g.n)}</h2><span>${g.r.length} ${g.r.length===1?"entry":"entries"}</span></div>`;
+  if (g.n.startsWith("Resource")) out += `<p class="desc" style="margin:8px 0 12px">Calling any endpoint without an id or name returns one of these list shapes.</p>`;
+  if (g.n === "Utility") out += `<p class="desc" style="margin:8px 0 12px">Common Models are the shared building blocks referenced by many endpoints.</p>`;
+  out += `<div style="display:flex;flex-direction:column;gap:14px">`;
+  g.r.forEach(r => {
+    const isEp = r.ep && r.ep !== "{endpoint}";
+    const key = isEp ? (r.req.endsWith("/encounters") ? r.ep + "/{id}/encounters" : r.ep) : null;
+    const e = key ? D.eps[key] : null;
+    const id = slug(isEp ? r.req : r.t);
+    const label = isEp ? r.req.replace(/^\/v2/,"") : (r.req ? r.req.replace(/^\/v2/,"") : r.t);
+    toc += `<a href="#${id}" data-res="${id}">${esc(isEp ? key : r.t)}</a>`;
+    const hay = [r.t, r.req, r.desc, ...r.m.flatMap(m => [m.n, ...m.f.map(f => f[0])])].join(" ").toLowerCase();
+    let chips = "";
+    if (e) chips += e.returns_array ? `<span class="chip warn">returns array</span>` : e.named ? `<span class="chip">id or name</span>` : `<span class="chip warn">id only · unnamed</span>`;
+    let refs = "";
+    if (e) {
+      const o = e.references_endpoints, i = inbound[key] || [];
+      if (o.length) refs += `<div class="refs"><span class="lbl">Points to</span>${o.map(x=>`<a class="ref" href="#${epAnchor(x)}">${x}</a>`).join("")}</div>`;
+      if (i.length) refs += `<div class="refs"><span class="lbl">Referenced by</span>${i.map(x=>`<a class="ref in" href="#${epAnchor(x)}">${x}</a>`).join("")}</div>`;
+    }
+    const models = r.m.map((m, mi) => `<div class="model" id="${id}--${m.n}"><h4>${esc(m.n)}${mi===0 && isEp ? "<small>response object</small>" : mi>0 ? "<small>nested object</small>" : ""}</h4>
+      <div class="tbl"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      ${m.f.map(f => `<tr><td class="f">${esc(f[0])}</td><td class="t">${typeHtml(f[1])}</td><td>${md(f[2])}</td></tr>`).join("")}
+      </tbody></table></div></div>`).join("");
+    const ex = r.ex ? `<details><summary>Example response</summary><pre>${esc(JSON.stringify(r.ex, null, 2).replaceAll("$BASE_URL","https://pokeapi.co/api"))}</pre></details>` : "";
+    out += `<article class="res" id="${id}" data-hay="${esc(hay)}">
+      <div class="res-h"><h3>${esc(r.t)}</h3><span class="path">${esc(label)}</span>${chips}</div>
+      ${r.desc ? `<p class="desc">${md(r.desc)}</p>` : ""}${key && D.notes && D.notes[key] ? `<div class="dnote"><span class="lbl">In the games</span><span>${D.notes[key]}</span></div>` : ""}${refs}${models}${ex}</article>`;
+  });
+  out += `</div></section>`;
+  toc += `</div>`;
+});
+document.getElementById("toc").innerHTML = toc;
+document.getElementById("groups").innerHTML = out;
+document.getElementById("groups").style.cssText = "display:flex;flex-direction:column;gap:36px";
+
+const q = document.getElementById("q");
+q.addEventListener("input", () => {
+  const v = q.value.trim().toLowerCase(); let any = false;
+  document.querySelectorAll("article.res").forEach(a => {
+    const hit = !v || a.dataset.hay.includes(v); a.hidden = !hit; if (hit) any = true;
+    const t = document.querySelector(`[data-res="${a.id}"]`); if (t) t.hidden = !hit;
+  });
+  document.querySelectorAll("section.grp").forEach(s => s.hidden = ![...s.querySelectorAll("article.res")].some(a => !a.hidden));
+  document.querySelectorAll(".toc-g").forEach(t => t.hidden = ![...t.querySelectorAll("a")].some(a => !a.hidden));
+  document.getElementById("nores").hidden = any;
+  document.querySelector(".toc-groups").style.display = v ? "block" : "";
+});
+</script>

@@ -1,0 +1,29 @@
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.dataset.tab === id;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById('p-' + t.dataset.tab).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('pokeplan-aws-tab', id); } catch(e){}
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-tab]');
+    if (!b) return;
+    show(b.dataset.tab, false);
+    if (b.classList.contains('next')) document.querySelector('.tabs').scrollIntoView({block:'start'});
+  });
+  document.querySelector('.tabs').addEventListener('keydown', function(e){
+    var i = tabs.indexOf(document.activeElement); if (i < 0) return;
+    if (e.key === 'ArrowRight') show(tabs[(i+1) % tabs.length].dataset.tab, true);
+    if (e.key === 'ArrowLeft') show(tabs[(i-1+tabs.length) % tabs.length].dataset.tab, true);
+  });
+  var start = location.hash.replace('#','');
+  if (!document.getElementById('p-' + start)) { try { start = localStorage.getItem('pokeplan-aws-tab') || 'start'; } catch(e){ start = 'start'; } }
+  if (document.getElementById('p-' + start)) show(start, false);
+})();
+</script>

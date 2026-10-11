@@ -1,0 +1,307 @@
+<title>Pokeplan Terraform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: one module at a time (tabs); each excerpt sits beside its explanation, stacking on phones.
+   Code is large, wraps instead of scrolling, and every colour passes 4.5:1 in both themes. */
+:root{
+  --bg:#f7f8fa; --surface:#ffffff; --code-bg:#eef1f5; --fg:#141a22; --muted:#4a5565; --line:#c9d0da;
+  --accent:#a24f07; --accent-bg:#fbeedd; --kw:#2b4aa0; --str:#17643f; --com:#545e6c;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111418; --surface:#191d23; --code-bg:#0b0d10; --fg:#eef1f5; --muted:#b4bdc9; --line:#39424f;
+  --accent:#f3ae6b; --accent-bg:#3a2a1b; --kw:#a9c1ff; --str:#8fe0b6; --com:#a7b0bc; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111418; --surface:#191d23; --code-bg:#0b0d10; --fg:#eef1f5; --muted:#b4bdc9; --line:#39424f;
+  --accent:#f3ae6b; --accent-bg:#3a2a1b; --kw:#a9c1ff; --str:#8fe0b6; --com:#a7b0bc; color-scheme:dark }
+
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.65 var(--body);padding-inline:16px;padding-block:28px 72px}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{text-wrap:balance;line-height:1.2;margin:0;font-weight:600}
+h1{font-size:clamp(30px,6vw,40px)} h2{font-size:28px} h3{font-size:19px}
+p{margin:0}
+.lede{font-size:18px;max-width:68ch}
+.muted{color:var(--muted)}
+code{font-family:var(--mono);font-size:.9em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+a{color:inherit;text-underline-offset:3px}
+.status{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:15px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px}
+
+/* tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+.tabs button,.next{font:600 16px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tabs button:focus-visible,.next:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (max-width:620px){.tabs{position:static}}
+.next{align-self:flex-start;background:var(--accent-bg);border-color:var(--accent)}
+
+.panel{display:flex;flex-direction:column;gap:22px}
+.panel-head{display:flex;flex-direction:column;gap:8px}
+.path{font-size:15px;color:var(--muted)}
+.builds{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;max-width:76ch}
+ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+
+/* excerpt + explanation */
+.ex{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start;padding-top:20px;border-top:1px solid var(--line)}
+@media (max-width:820px){.ex{grid-template-columns:minmax(0,1fr);gap:12px}}
+.code{min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--code-bg)}
+.file{font:600 14px var(--mono);padding:8px 14px;border-bottom:1px solid var(--line);background:var(--surface);color:var(--muted);overflow-wrap:anywhere}
+pre{margin:0;padding:14px;font:15px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--fg)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .ln{display:block;padding-left:calc(var(--i) + 2ch);text-indent:-2ch}
+@media (max-width:620px){pre{font-size:14px;padding:12px}}
+.k{color:var(--kw);font-weight:600}.s{color:var(--str)}.c{color:var(--com);font-style:italic}
+.why{min-width:0;font-size:17px;line-height:1.7}
+.why code{font-size:.88em}
+
+/* start-here example */
+.anat{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.anat{grid-template-columns:minmax(0,1fr)}}
+.terms{display:flex;flex-direction:column;gap:12px;margin:0}
+.terms div{display:flex;flex-direction:column;gap:2px}
+.terms dt{font:600 15px var(--mono)} .terms dd{margin:0}
+table{border-collapse:collapse;width:100%;font-size:16px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font-size:14px;color:var(--muted);font-weight:600}
+@media (max-width:620px){
+  table,thead,tbody,tr,td{display:block} thead{display:none}
+  tr{padding:12px 0;border-bottom:1px solid var(--line)} td{border:0;padding:2px 0}
+  td[data-l]::before{content:attr(data-l) ": ";font-weight:600;color:var(--muted)}
+}
+</style>
+
+<main>
+<header style="display:flex;flex-direction:column;gap:14px">
+  <h1>Pokeplan Terraform</h1>
+  <p class="lede">The code that would build the <a href="https://claude.ai/artifact/VKQruF35cyaowFznme2MEo">Pokeplan on AWS</a> architecture. Pick a part below; each one says what it builds in plain English, then shows the important lines with an explanation beside them.</p>
+  <div class="status">
+    <span class="chip">Nothing has been built in AWS</span>
+    <span class="chip">Code checked: <code>terraform validate</code> passes</span>
+    <span class="chip">Both layouts plan in a test run</span>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Parts of the Terraform">
+  <button role="tab" id="tab-start" aria-controls="p-start" aria-selected="true" data-tab="start">Start here</button>
+<button role="tab" id="tab-network" aria-controls="p-network" aria-selected="false" data-tab="network">Network</button>
+<button role="tab" id="tab-storage" aria-controls="p-storage" aria-selected="false" data-tab="storage">Storage</button>
+<button role="tab" id="tab-events" aria-controls="p-events" aria-selected="false" data-tab="events">Events</button>
+<button role="tab" id="tab-iam" aria-controls="p-iam" aria-selected="false" data-tab="iam">Permissions</button>
+<button role="tab" id="tab-governance" aria-controls="p-governance" aria-selected="false" data-tab="governance">Governance</button>
+<button role="tab" id="tab-compute" aria-controls="p-compute" aria-selected="false" data-tab="compute">Compute</button>
+<button role="tab" id="tab-stack" aria-controls="p-stack" aria-selected="false" data-tab="stack">The stack</button>
+</nav>
+
+<section role="tabpanel" id="p-start" aria-labelledby="tab-start" class="panel">
+  <div class="panel-head">
+    <h2>Start here</h2>
+    <p class="lede">Terraform files describe the AWS resources you want. <code>terraform plan</code> compares that description with what exists and lists the changes; <code>terraform apply</code> makes them.</p>
+  </div>
+
+  <h3>How to read one block</h3>
+  <div class="anat">
+    <div class="code"><div class="file">example</div><pre><code><span class="k">resource</span> <span class="s">"aws_s3_bucket"</span> <span class="s">"raw"</span> {
+  bucket = <span class="s">"pokeplan-prod-raw"</span>
+}
+
+<span class="k">module</span> <span class="s">"storage"</span> {
+  source         = <span class="s">"../modules/storage"</span>
+  s3_endpoint_id = module.network.s3_endpoint_id
+}</code></pre></div>
+    <dl class="terms">
+      <div><dt>resource "type" "name"</dt><dd>One thing to create. The first word is the AWS type (here an S3 bucket); the second is the name the code uses for it.</dd></div>
+      <div><dt>bucket = "..."</dt><dd>A setting on that thing.</dd></div>
+      <div><dt>module</dt><dd>A folder of resources used like a function: inputs go in, outputs come out.</dd></div>
+      <div><dt>var.x / module.a.y</dt><dd>An input to this module / an output of module <code>a</code>.</dd></div>
+      <div><dt>for_each</dt><dd>Make one copy per item in a list or map, such as one subnet per zone.</dd></div>
+    </dl>
+  </div>
+
+  <h3>Two layouts, same code</h3>
+  <p class="muted" style="max-width:68ch">You choose one with a settings file. The learning layout swaps the expensive network pieces for cheaper ones.</p>
+  <table>
+    <thead><tr><th>Setting</th><th>Production</th><th>Learning</th></tr></thead>
+    <tbody>
+      <tr><td><b>Outbound filter</b></td><td data-l="Production">Network Firewall</td><td data-l="Learning">DNS Firewall</td></tr>
+      <tr><td><b>NAT gateways</b></td><td data-l="Production">One per zone</td><td data-l="Learning">One</td></tr>
+      <tr><td><b>Private AWS connections</b></td><td data-l="Production">12 services</td><td data-l="Learning">None (via NAT)</td></tr>
+      <tr><td><b>Database standby</b></td><td data-l="Production">Yes</td><td data-l="Learning">No</td></tr>
+      <tr><td><b>Dagster when idle</b></td><td data-l="Production">Running</td><td data-l="Learning">Scaled to zero</td></tr>
+      <tr><td><b>Rough monthly cost</b></td><td data-l="Production">About $800</td><td data-l="Learning">About $70</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="max-width:68ch">All 34 files are in the project folder <code>pokeapi/architecture/terraform/</code>. This page shows the parts that carry the design.</p>
+  <button class="next" data-tab="network">Next: Network →</button>
+</section>
+
+<section role="tabpanel" id="p-network" aria-labelledby="tab-network" class="panel" hidden>
+  <div class="panel-head">
+    <h2>Network</h2>
+    <p class="lede">The private network everything else runs inside, and the only ways in and out of it.</p>
+    <p class="path">Folder: <code>terraform/modules/network/</code></p>
+  </div>
+  <div class="builds"><h3>What it builds</h3><ul><li>A VPC (10.40.0.0/16) spread over two availability zones.</li><li>Five kinds of subnet per zone: public (load balancer), egress (NAT), app (containers), data (database, no way out), firewall.</li><li>In prod, all outbound traffic passes Network Firewall, which only lets pokeapi.co and github.com through. The learning layout uses a cheaper DNS filter instead.</li><li>Private connections to AWS services (S3, Athena, SQS and others), so that traffic never touches the internet.</li><li>Flow logs of every connection.</li></ul></div>
+  <h3>The key code, explained</h3>
+  <div class="ex">
+  <div class="code"><div class="file">modules/network/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_subnet"</span> <span class="s">"app"</span> {</span><span class="ln" style="--i:2ch">for_each          = local.az_index</span><span class="ln" style="--i:2ch">vpc_id            = aws_vpc.this.id</span><span class="ln" style="--i:2ch">availability_zone = each.key</span><span class="ln" style="--i:2ch">cidr_block        = cidrsubnet(var.cidr, 8, 10 + each.value)</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">One private subnet per availability zone for the containers. <code>for_each</code> repeats the block for each zone, and <code>cidrsubnet</code> cuts 10.40.10.0/24 and 10.40.11.0/24 out of the VPC range. The other four subnet kinds are the same block with different numbers.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/network/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_route"</span> <span class="s">"app_default"</span> {</span><span class="ln" style="--i:2ch">for_each               = local.az_index</span><span class="ln" style="--i:2ch">route_table_id         = aws_route_table.app[each.key].id</span><span class="ln" style="--i:2ch">destination_cidr_block = <span class="s">"0.0.0.0/0"</span></span><span class="ln" style="--i:2ch">vpc_endpoint_id        = var.enable_network_firewall ? local.firewall_endpoints[each.key] : null</span><span class="ln" style="--i:2ch">nat_gateway_id         = var.enable_network_firewall ? null : aws_nat_gateway.this[local.nat_for[each.key]].id</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">Where the containers send internet traffic. In prod it goes to the firewall first, then NAT. In the learning layout it goes straight to NAT. The <code>condition ? a : b</code> form picks one based on the switch, and <code>null</code> means "leave this unset".</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/network/firewall.tf</div><pre><code><span class="ln" style="--i:0ch">rules_source_list {</span><span class="ln" style="--i:2ch">generated_rules_type = <span class="s">"ALLOWLIST"</span></span><span class="ln" style="--i:2ch">target_types         = [<span class="s">"TLS_SNI"</span>, <span class="s">"HTTP_HOST"</span>]</span><span class="ln" style="--i:2ch">targets              = var.egress_domains</span><span class="ln" style="--i:0ch">}</span><span class="ln" style="--i:0ch">&#8203;</span><span class="ln" style="--i:0ch"><span class="c"># from the firewall policy:</span></span><span class="ln" style="--i:0ch">stateful_default_actions = [<span class="s">"aws:drop_established"</span>, <span class="s">"aws:alert_established"</span>]</span></code></pre></div>
+  <p class="why">The allowlist. A connection is let out only if the website name it asks for is on <code>egress_domains</code> (pokeapi.co, github.com and their subdomains). Everything else is dropped and written to the alert log.</p>
+</div>
+  <button class="next" data-tab="storage">Next: Storage →</button>
+</section>
+<section role="tabpanel" id="p-storage" aria-labelledby="tab-storage" class="panel" hidden>
+  <div class="panel-head">
+    <h2>Storage</h2>
+    <p class="lede">Where the data lives: S3 buckets for the lakehouse, and the catalogue Athena uses to find tables.</p>
+    <p class="path">Folder: <code>terraform/modules/storage/</code></p>
+  </div>
+  <div class="builds"><h3>What it builds</h3><ul><li>Three buckets: <b>raw</b> (what dlt lands), <b>lake</b> (dbt's staging and mart tables), <b>athena</b> (query results, deleted after 30 days).</li><li>A separate KMS encryption key for each bucket, rotated yearly.</li><li>Public access blocked, versioning on, old versions kept 90 days so a bad load can be rolled back.</li><li>Three Glue databases matching the star schema layers: raw, staging, mart.</li><li>An Athena workgroup with a 10 GiB per-query limit as a cost guard.</li></ul></div>
+  <h3>The key code, explained</h3>
+  <div class="ex">
+  <div class="code"><div class="file">modules/storage/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_s3_bucket_server_side_encryption_configuration"</span> <span class="s">"this"</span> {</span><span class="ln" style="--i:2ch">for_each = aws_s3_bucket.this</span><span class="ln" style="--i:2ch">bucket   = each.value.id</span><span class="ln" style="--i:2ch"><span class="k">rule</span> {</span><span class="ln" style="--i:4ch">apply_server_side_encryption_by_default {</span><span class="ln" style="--i:6ch">sse_algorithm     = <span class="s">"aws:kms"</span></span><span class="ln" style="--i:6ch">kms_master_key_id = aws_kms_key.this[each.key].arn</span><span class="ln" style="--i:4ch">}</span><span class="ln" style="--i:4ch">bucket_key_enabled = true</span><span class="ln" style="--i:2ch">}</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">Every object in every bucket is encrypted with that bucket's own key. Looping over <code>aws_s3_bucket.this</code> means a new bucket added later gets this automatically.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/storage/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">statement</span> {</span><span class="ln" style="--i:2ch">sid       = <span class="s">"DenyWritesOutsideVpc"</span></span><span class="ln" style="--i:2ch">effect    = <span class="s">"Deny"</span></span><span class="ln" style="--i:2ch">actions   = [<span class="s">"s3:PutObject"</span>, <span class="s">"s3:DeleteObject"</span>]</span><span class="ln" style="--i:2ch"><span class="c">  # ... resources and principals trimmed</span></span><span class="ln" style="--i:2ch"><span class="k">condition</span> {</span><span class="ln" style="--i:4ch">test     = <span class="s">"StringNotEqualsIfExists"</span></span><span class="ln" style="--i:4ch"><span class="k">variable</span> = <span class="s">"aws:SourceVpce"</span></span><span class="ln" style="--i:4ch">values   = [var.s3_endpoint_id]</span><span class="ln" style="--i:2ch">}</span><span class="ln" style="--i:2ch"><span class="k">condition</span> {</span><span class="ln" style="--i:4ch">test     = <span class="s">"ForAllValues:StringNotEquals"</span></span><span class="ln" style="--i:4ch"><span class="k">variable</span> = <span class="s">"aws:CalledVia"</span></span><span class="ln" style="--i:4ch">values   = [<span class="s">"athena.amazonaws.com"</span>]</span><span class="ln" style="--i:2ch">}</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">Part of the bucket policy. It refuses any write that did not arrive through the VPC's private S3 connection, unless Athena is writing on dbt's behalf. Even a leaked AWS key used from a laptop cannot change the data.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/storage/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_glue_catalog_database"</span> <span class="s">"this"</span> {</span><span class="ln" style="--i:2ch">for_each     = { raw = <span class="s">"raw"</span>, staging = <span class="s">"lake"</span>, mart = <span class="s">"lake"</span> }</span><span class="ln" style="--i:2ch">name         = <span class="s">"${replace(var.name, "</span>-<span class="s">", "</span>_<span class="s">")}_${each.key}"</span></span><span class="ln" style="--i:2ch">location_uri = <span class="s">"s3://${aws_s3_bucket.this[each.value].bucket}/${each.key}/"</span></span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">The three schema layers as Glue databases: <code>pokeplan_prod_raw</code> in the raw bucket, and staging and mart in the lake bucket. Terraform makes only the databases; dlt and dbt create the tables inside them.</p>
+</div>
+  <button class="next" data-tab="events">Next: Events →</button>
+</section>
+<section role="tabpanel" id="p-events" aria-labelledby="tab-events" class="panel" hidden>
+  <div class="panel-head">
+    <h2>Events</h2>
+    <p class="lede">What makes the pipeline event-driven: a bus, rules that route each event, and the nightly trigger.</p>
+    <p class="path">Folder: <code>terraform/modules/events/</code></p>
+  </div>
+  <div class="builds"><h3>What it builds</h3><ul><li>An EventBridge bus called <code>pokeplan-prod</code>, with every event archived for 30 days so a day can be replayed.</li><li><code>ingest.requested</code> and <code>raw.landed</code> are routed to two SQS queues that Dagster watches.</li><li><code>quality.failed</code>, <code>run.failed</code> and anything stuck in a dead-letter queue go to an alerts topic (email or Slack).</li><li>A nightly 02:00 London schedule runs a small Lambda that reads the latest PokeAPI/api-data commit and publishes <code>ingest.requested</code>.</li></ul></div>
+  <h3>The key code, explained</h3>
+  <div class="ex">
+  <div class="code"><div class="file">modules/events/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">locals</span> {</span><span class="ln" style="--i:2ch">queues = {</span><span class="ln" style="--i:4ch">ingest    = <span class="s">"ingest.requested"</span></span><span class="ln" style="--i:4ch">transform = <span class="s">"raw.landed"</span></span><span class="ln" style="--i:2ch">}</span><span class="ln" style="--i:0ch">}</span><span class="ln" style="--i:0ch">&#8203;</span><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_cloudwatch_event_rule"</span> <span class="s">"queue"</span> {</span><span class="ln" style="--i:2ch">for_each       = local.queues</span><span class="ln" style="--i:2ch">name           = <span class="s">"${var.name}-${each.key}"</span></span><span class="ln" style="--i:2ch">event_bus_name = aws_cloudwatch_event_bus.this.name</span><span class="ln" style="--i:2ch">event_pattern = jsonencode({</span><span class="ln" style="--i:4ch">source        = [local.source]</span><span class="ln" style="--i:4ch"><span class="s">"detail-type"</span> = [each.value]</span><span class="ln" style="--i:2ch">})</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">The routing table. Each line in <code>queues</code> becomes a rule: "when an event of this type arrives on the bus, send it to this queue". Adding a new event type means adding one line here.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/events/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_sqs_queue"</span> <span class="s">"this"</span> {</span><span class="ln" style="--i:2ch">for_each                   = local.queues</span><span class="ln" style="--i:2ch">name                       = <span class="s">"${var.name}-${each.key}"</span></span><span class="ln" style="--i:2ch">visibility_timeout_seconds = 300</span><span class="ln" style="--i:2ch"><span class="c">  # ... retention and encryption trimmed</span></span><span class="ln" style="--i:2ch">redrive_policy = jsonencode({</span><span class="ln" style="--i:4ch">deadLetterTargetArn = aws_sqs_queue.dlq[each.key].arn</span><span class="ln" style="--i:4ch">maxReceiveCount     = 3</span><span class="ln" style="--i:2ch">})</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">The two queues Dagster reads. If a message fails three times it moves to a dead-letter queue instead of retrying forever, and an alarm fires when that happens.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/events/trigger.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_scheduler_schedule"</span> <span class="s">"nightly"</span> {</span><span class="ln" style="--i:2ch">name                         = <span class="s">"${var.name}-nightly"</span></span><span class="ln" style="--i:2ch">schedule_expression          = var.schedule         <span class="c"> # cron(0 2 * * ? *)</span></span><span class="ln" style="--i:2ch">schedule_expression_timezone = var.schedule_timezone<span class="c"> # Europe/London</span></span><span class="ln" style="--i:2ch"><span class="c">  # ... flexible_time_window trimmed</span></span><span class="ln" style="--i:2ch"><span class="k">target</span> {</span><span class="ln" style="--i:4ch">arn      = aws_lambda_function.check_commit.arn</span><span class="ln" style="--i:4ch">role_arn = aws_iam_role.scheduler.arn</span><span class="ln" style="--i:2ch">}</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">Every night at 02:00 UK time, run the commit-check Lambda. It publishes the commit ID, and Dagster skips commits it has already loaded, so a quiet night costs nothing.</p>
+</div>
+  <button class="next" data-tab="iam">Next: Permissions →</button>
+</section>
+<section role="tabpanel" id="p-iam" aria-labelledby="tab-iam" class="panel" hidden>
+  <div class="panel-head">
+    <h2>Permissions</h2>
+    <p class="lede">Who may do what. Each job gets its own role with only the access it needs.</p>
+    <p class="path">Folder: <code>terraform/modules/iam/</code></p>
+  </div>
+  <div class="builds"><h3>What it builds</h3><ul><li><b>ingest</b> (dlt): write the raw bucket and raw tables, nothing else.</li><li><b>transform</b> (Soda and dbt): read raw, write staging and mart.</li><li><b>dagster</b>: read the two queues and start the ingest and transform tasks.</li><li><b>metabase</b>: read the mart tables through Athena.</li><li>A deploy role that GitHub Actions can use from the main branch only, with no AWS keys stored anywhere.</li></ul></div>
+  <h3>The key code, explained</h3>
+  <div class="ex">
+  <div class="code"><div class="file">modules/iam/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="c"># ingest role</span></span><span class="ln" style="--i:0ch"><span class="k">statement</span> {</span><span class="ln" style="--i:2ch">sid       = <span class="s">"RawBucketReadWrite"</span></span><span class="ln" style="--i:2ch">actions   = [<span class="s">"s3:GetObject"</span>, <span class="s">"s3:PutObject"</span>, <span class="s">"s3:DeleteObject"</span>, <span class="s">"s3:ListBucket"</span>, <span class="s">"s3:GetBucketLocation"</span>]</span><span class="ln" style="--i:2ch">resources = [var.bucket_arns[<span class="s">"raw"</span>], <span class="s">"${var.bucket_arns["</span>raw<span class="s">"]}/*"</span>]</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">The dlt job can read and write the raw bucket and nothing else. A bug in ingest cannot damage the marts.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/iam/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="c"># dagster role</span></span><span class="ln" style="--i:0ch"><span class="k">statement</span> {</span><span class="ln" style="--i:2ch">sid       = <span class="s">"PassOnlyPipelineRoles"</span></span><span class="ln" style="--i:2ch">actions   = [<span class="s">"iam:PassRole"</span>]</span><span class="ln" style="--i:2ch">resources = [aws_iam_role.ingest.arn, aws_iam_role.transform.arn, aws_iam_role.execution.arn]</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">Dagster starts tasks and gives each one a role. This limits it to the two pipeline roles, so Dagster cannot start a task with more power than those.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/iam/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">condition</span> {</span><span class="ln" style="--i:2ch">test     = <span class="s">"StringLike"</span></span><span class="ln" style="--i:2ch"><span class="k">variable</span> = <span class="s">"token.actions.githubusercontent.com:sub"</span></span><span class="ln" style="--i:2ch">values   = [<span class="s">"repo:${var.github_repo}:ref:refs/heads/main"</span>, <span class="s">"repo:${var.github_repo}:environment:prod"</span>]</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">GitHub Actions signs in with a short-lived token instead of stored keys. This condition only accepts tokens from the main branch or the protected prod environment of your repository.</p>
+</div>
+  <button class="next" data-tab="governance">Next: Governance →</button>
+</section>
+<section role="tabpanel" id="p-governance" aria-labelledby="tab-governance" class="panel" hidden>
+  <div class="panel-head">
+    <h2>Governance</h2>
+    <p class="lede">A second lock on the data. IAM says a role may use Athena; Lake Formation says which tables it may see.</p>
+    <p class="path">Folder: <code>terraform/modules/governance/</code></p>
+  </div>
+  <div class="builds"><h3>What it builds</h3><ul><li>Names the Lake Formation administrators.</li><li>Registers the raw and lake buckets so Lake Formation controls access to them.</li><li>Grants each role access to whole databases: write for the jobs that build them, read-only for the jobs and people that use them.</li></ul></div>
+  <h3>The key code, explained</h3>
+  <div class="ex">
+  <div class="code"><div class="file">modules/governance/main.tf</div><pre><code><span class="ln" style="--i:0ch">writers = {</span><span class="ln" style="--i:2ch">ingest_raw        = { role = var.task_role_arns[<span class="s">"ingest"</span>], db = local.db[<span class="s">"raw"</span>], location = <span class="s">"raw"</span> }</span><span class="ln" style="--i:2ch">transform_staging = { role = var.task_role_arns[<span class="s">"transform"</span>], db = local.db[<span class="s">"staging"</span>], location = <span class="s">"lake"</span> }</span><span class="ln" style="--i:2ch">transform_mart    = { role = var.task_role_arns[<span class="s">"transform"</span>], db = local.db[<span class="s">"mart"</span>], location = <span class="s">"lake"</span> }</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">The whole access model in three lines: which role writes which layer. The readers list next to it works the same way: transform reads raw, and Metabase and analysts read mart.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/governance/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_lakeformation_permissions"</span> <span class="s">"reader_tables"</span> {</span><span class="ln" style="--i:2ch">for_each    = local.readers</span><span class="ln" style="--i:2ch">principal   = each.value.role</span><span class="ln" style="--i:2ch">permissions = [<span class="s">"SELECT"</span>, <span class="s">"DESCRIBE"</span>]</span><span class="ln" style="--i:2ch"><span class="k">table</span> {</span><span class="ln" style="--i:4ch">database_name = each.value.db</span><span class="ln" style="--i:4ch">wildcard      = true</span><span class="ln" style="--i:2ch">}</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">Turns each reader line into a grant: SELECT on every table in that database (<code>wildcard = true</code>), including tables dbt creates later.</p>
+</div>
+  <button class="next" data-tab="compute">Next: Compute →</button>
+</section>
+<section role="tabpanel" id="p-compute" aria-labelledby="tab-compute" class="panel" hidden>
+  <div class="panel-head">
+    <h2>Compute</h2>
+    <p class="lede">The things that run: containers, the database behind Dagster and Metabase, and the front door.</p>
+    <p class="path">Folder: <code>terraform/modules/compute/</code></p>
+  </div>
+  <div class="builds"><h3>What it builds</h3><ul><li>An ECS cluster on Fargate (no servers to manage).</li><li>Long-running services: Dagster's web UI and scheduler, and Metabase.</li><li>Run-once task definitions for ingest (dlt) and transform (Soda and dbt), started by Dagster for each run.</li><li>Postgres 16 on RDS for Dagster's run history and Metabase's settings, in the data subnets.</li><li>A load balancer that makes everyone sign in before reaching Dagster or Metabase, with AWS WAF in front.</li></ul></div>
+  <h3>The key code, explained</h3>
+  <div class="ex">
+  <div class="code"><div class="file">modules/compute/alb.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">action</span> {</span><span class="ln" style="--i:2ch">type  = <span class="s">"authenticate-oidc"</span></span><span class="ln" style="--i:2ch">order = 1</span><span class="ln" style="--i:2ch">authenticate_oidc {</span><span class="ln" style="--i:4ch">issuer    = var.oidc.issuer</span><span class="ln" style="--i:4ch">client_id = var.oidc.client_id</span><span class="ln" style="--i:4ch"><span class="c">    # ... endpoints and secret trimmed</span></span><span class="ln" style="--i:2ch">}</span><span class="ln" style="--i:0ch">}</span><span class="ln" style="--i:0ch">&#8203;</span><span class="ln" style="--i:0ch"><span class="k">action</span> {</span><span class="ln" style="--i:2ch">type             = <span class="s">"forward"</span></span><span class="ln" style="--i:2ch">order            = 2</span><span class="ln" style="--i:2ch">target_group_arn = aws_lb_target_group.this[each.key].arn</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">Two steps for every request to metabase.&lt;domain&gt; or dagster.&lt;domain&gt;. First, sign in with your identity provider. Only then is the request passed to the container.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/compute/ecs.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_ecs_task_definition"</span> <span class="s">"pipeline"</span> {</span><span class="ln" style="--i:2ch">for_each      = { ingest = 1024, transform = 2048 }</span><span class="ln" style="--i:2ch">family        = <span class="s">"${var.name}-${each.key}"</span></span><span class="ln" style="--i:2ch">cpu           = each.value</span><span class="ln" style="--i:2ch">memory        = each.value * 4</span><span class="ln" style="--i:2ch">task_role_arn = var.task_role_arns[each.key]</span><span class="ln" style="--i:2ch"><span class="c">  # ... image, logs and secrets trimmed</span></span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">One block, two task definitions. Ingest gets 1 vCPU and 4 GB, transform gets 2 vCPU and 8 GB, and each gets its own role from the permissions module.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">modules/compute/database.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">resource</span> <span class="s">"aws_db_instance"</span> <span class="s">"this"</span> {</span><span class="ln" style="--i:2ch">engine                      = <span class="s">"postgres"</span></span><span class="ln" style="--i:2ch">engine_version              = <span class="s">"16"</span></span><span class="ln" style="--i:2ch">manage_master_user_password = true</span><span class="ln" style="--i:2ch">storage_encrypted           = true</span><span class="ln" style="--i:2ch">multi_az                    = var.db_multi_az</span><span class="ln" style="--i:2ch">publicly_accessible         = false</span><span class="ln" style="--i:2ch">deletion_protection         = var.deletion_protection</span><span class="ln" style="--i:2ch"><span class="c">  # ... size, backups and logging trimmed</span></span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">The metadata database. AWS creates and rotates its password, so no password appears in the code. It is encrypted, unreachable from the internet, and has a standby copy in prod.</p>
+</div>
+  <button class="next" data-tab="stack">Next: The stack →</button>
+</section>
+<section role="tabpanel" id="p-stack" aria-labelledby="tab-stack" class="panel" hidden>
+  <div class="panel-head">
+    <h2>The stack</h2>
+    <p class="lede">The one folder you run. It joins the modules together and picks the layout.</p>
+    <p class="path">Folder: <code>terraform/live/</code></p>
+  </div>
+  <div class="builds"><h3>What it builds</h3><ul><li><code>main.tf</code> calls each module and passes one module's outputs into the next.</li><li><code>prod.tfvars</code> and <code>learning.tfvars</code> hold the switches that make the two layouts.</li><li><code>tests/plan.tftest.hcl</code> plans both layouts against a fake AWS, so the code is checked without an account.</li></ul></div>
+  <h3>The key code, explained</h3>
+  <div class="ex">
+  <div class="code"><div class="file">live/main.tf</div><pre><code><span class="ln" style="--i:0ch"><span class="k">module</span> <span class="s">"iam"</span> {</span><span class="ln" style="--i:2ch">source = <span class="s">"../modules/iam"</span></span><span class="ln" style="--i:0ch">&#8203;</span><span class="ln" style="--i:2ch">name                = local.name</span><span class="ln" style="--i:2ch">bucket_arns         = module.storage.bucket_arns</span><span class="ln" style="--i:2ch">kms_key_arns        = module.storage.kms_key_arns</span><span class="ln" style="--i:2ch">glue_database_names = module.storage.glue_database_names</span><span class="ln" style="--i:2ch">athena_workgroup    = module.storage.athena_workgroup</span><span class="ln" style="--i:2ch">bus_arn             = module.events.bus_arn</span><span class="ln" style="--i:2ch">queue_arns          = module.events.queue_arns</span><span class="ln" style="--i:2ch">github_repo         = var.github_repo</span><span class="ln" style="--i:0ch">}</span></code></pre></div>
+  <p class="why">How modules connect. <code>module.storage.bucket_arns</code> is an output of the storage module, handed to the permissions module as an input. Terraform works out the build order from these references.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">live/learning.tfvars</div><pre><code><span class="ln" style="--i:0ch">environment             = <span class="s">"learning"</span></span><span class="ln" style="--i:0ch">az_count                = 2</span><span class="ln" style="--i:0ch">single_nat_gateway      = true</span><span class="ln" style="--i:0ch">enable_network_firewall = false</span><span class="ln" style="--i:0ch">interface_endpoints     = []</span><span class="ln" style="--i:0ch">db_multi_az             = false</span><span class="ln" style="--i:0ch">deletion_protection     = false</span></code></pre></div>
+  <p class="why">The cheap layout is just different answers to the same questions. The prod file says the opposite for each line, so the two never drift apart.</p>
+</div><div class="ex">
+  <div class="code"><div class="file">shell</div><pre><code><span class="ln" style="--i:0ch">cd live</span><span class="ln" style="--i:0ch"><span class="k">terraform</span> init -backend-config=backend-prod.hcl</span><span class="ln" style="--i:0ch"><span class="k">terraform</span> plan  -var-file=prod.tfvars</span><span class="ln" style="--i:0ch"><span class="k">terraform</span> apply -var-file=prod.tfvars</span></code></pre></div>
+  <p class="why">How it would be run. <code>plan</code> shows what would change and touches nothing; <code>apply</code> builds it. None of this has been run.</p>
+</div>
+  
+</section>
+</main>
+
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.dataset.tab === id;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById('p-' + t.dataset.tab).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('pokeplan-tf-tab', id); } catch(e){}
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-tab]');
+    if (!b) return;
+    show(b.dataset.tab, false);
+    if (b.classList.contains('next')) document.querySelector('.tabs').scrollIntoView({block:'start'});
+  });
+  document.querySelector('.tabs').addEventListener('keydown', function(e){
+    var i = tabs.indexOf(document.activeElement); if (i < 0) return;
+    if (e.key === 'ArrowRight') show(tabs[(i+1) % tabs.length].dataset.tab, true);
+    if (e.key === 'ArrowLeft') show(tabs[(i-1+tabs.length) % tabs.length].dataset.tab, true);
+  });
+  var start = location.hash.replace('#','');
+  if (!document.getElementById('p-' + start)) { try { start = localStorage.getItem('pokeplan-tf-tab') || 'start'; } catch(e){ start = 'start'; } }
+  if (document.getElementById('p-' + start)) show(start, false);
+})();
+</script>

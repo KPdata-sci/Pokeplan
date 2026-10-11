@@ -1,0 +1,226 @@
+<title>Pokémon Domain Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column of numbered chapters (the order follows how the data model is built), with type-coloured chips as the subject's own vocabulary. */
+:root {
+  --bg: #f3f5f2; --surface: #ffffff; --ink: #1b2420; --muted: #56635d; --line: #d3dbd6;
+  --accent: #b23a2e; --accent-soft: #f6e3df; --model: #1f5f7a; --model-soft: #e1eef3;
+  --f-display: "Fraunces", Georgia, serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  /* type colours (subject data, same in both themes) */
+  --t-normal:#9a9a78; --t-fire:#e0742b; --t-water:#4f7fe0; --t-grass:#5fae3c; --t-electric:#d9b417;
+  --t-ice:#6cc4c0; --t-fighting:#b0302a; --t-poison:#9341a0; --t-ground:#c9a24f; --t-flying:#8f7fe0;
+  --t-psychic:#e8507c; --t-bug:#98a51c; --t-rock:#a8902f; --t-ghost:#6a5590; --t-dragon:#6a3ef0;
+  --t-dark:#6a5545; --t-steel:#9a9ab8; --t-fairy:#d97fa0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121815; --surface: #1a221e; --ink: #e5ece8; --muted: #a4b2ab; --line: #2f3b35;
+    --accent: #f08a7c; --accent-soft: #3d1f1b; --model: #7cc3df; --model-soft: #16323d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121815; --surface: #1a221e; --ink: #e5ece8; --muted: #a4b2ab; --line: #2f3b35;
+  --accent: #f08a7c; --accent-soft: #3d1f1b; --model: #7cc3df; --model-soft: #16323d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--f-body); padding-inline: 20px; padding-block: 40px 80px; }
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 56px; }
+section { display: grid; gap: 16px; min-width: 0; }
+h1, h2, h3 { margin: 0; line-height: 1.15; text-wrap: balance; font-family: var(--f-display); }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.65rem; font-weight: 600; display: flex; gap: 14px; align-items: baseline; }
+h2 .n { font: 500 0.95rem var(--f-mono); color: var(--accent); }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 1.15rem; color: var(--muted); }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em; }
+a { color: var(--model); }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 68ch; }
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.72rem/1.3 var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+tr:last-child td { border-bottom: 0; }
+td.num { text-align: right; }
+.t { display: inline-block; font: 700 0.72rem/1 var(--f-body); color: #fff; padding: 4px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.split > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; align-content: start; }
+.cap { font: 500 0.72rem/1 var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.model { background: var(--model-soft); border-left: 3px solid var(--model); padding: 12px 16px; border-radius: 0 6px 6px 0; max-width: 72ch; }
+.model b { color: var(--model); }
+.callout { background: var(--accent-soft); padding: 14px 18px; border-radius: 6px; max-width: 72ch; }
+.tm { display: flex; flex-wrap: wrap; gap: 4px; }
+.tm span { font: 500 0.78rem var(--f-mono); padding: 6px 8px; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); }
+.tm span.chg { border-color: var(--accent); color: var(--accent); }
+.note { color: var(--muted); font-size: 0.92rem; }
+</style>
+
+<main>
+<header style="display:grid;gap:14px">
+  <p class="cap">Pokeplan · context for the PokeAPI data</p>
+  <h1>Pokémon Domain Guide</h1>
+  <p class="lede">What you need to know about the games to model PokeAPI well. The same move, Pokémon or type matchup can mean different things in different games, and the API only partly says so. Counts are measured on the real data (PokeAPI source, 7 Oct 2026).</p>
+  <p class="note">Blue boxes say what each fact changes in the <a href="https://claude.ai/artifact/PG1jbLypmwWsE339gdRm3E">star schema</a>.</p>
+</header>
+
+<section>
+  <h2><span class="n">1</span>A 30-year timeline</h2>
+  <p>The series is split into nine <b>generations</b>. Each adds species, usually a region, and new rules.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Gen</th><th>Years</th><th>Games</th><th>New region</th><th>Species</th><th>New rules that affect the data</th></tr></thead>
+    <tbody>
+      <tr><td>I</td><td>1996–99</td><td>Red/Green, Blue, Yellow</td><td>Kanto</td><td class="num">151</td><td>One Special stat; Ghost can't hit Psychic (a bug)</td></tr>
+      <tr><td>II</td><td>1999–2001</td><td>Gold/Silver, Crystal</td><td>Johto</td><td class="num">100</td><td>Dark and Steel types, held items, breeding, Special split in two</td></tr>
+      <tr><td>III</td><td>2002–05</td><td>Ruby/Sapphire, Emerald, FireRed/LeafGreen</td><td>Hoenn</td><td class="num">135</td><td>Abilities, natures</td></tr>
+      <tr><td>IV</td><td>2006–10</td><td>Diamond/Pearl, Platinum, HeartGold/SoulSilver</td><td>Sinnoh</td><td class="num">107</td><td>Physical/special split</td></tr>
+      <tr><td>V</td><td>2010–12</td><td>Black/White, Black 2/White 2</td><td>Unova</td><td class="num">156</td><td>Hidden abilities, reusable TMs, seasons</td></tr>
+      <tr><td>VI</td><td>2013–14</td><td>X/Y, Omega Ruby/Alpha Sapphire</td><td>Kalos</td><td class="num">72</td><td>Fairy type, Mega Evolution, base-stat update</td></tr>
+      <tr><td>VII</td><td>2016–18</td><td>Sun/Moon, Ultra Sun/Moon, Let's Go</td><td>Alola</td><td class="num">88</td><td>Regional forms, Z-Moves, HMs removed</td></tr>
+      <tr><td>VIII</td><td>2019–22</td><td>Sword/Shield + DLC, Brilliant Diamond/Shining Pearl, Legends: Arceus</td><td>Galar, Hisui</td><td class="num">96</td><td>Dynamax, TRs, overworld encounters</td></tr>
+      <tr><td>IX</td><td>2022–</td><td>Scarlet/Violet + DLC, Legends: Z-A, Champions</td><td>Paldea</td><td class="num">120</td><td>Terastallization, Stellar type</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Versions and version groups.</b> Games come in pairs (Red and Blue) that share almost all data. PokeAPI groups them: 53 versions in 32 version groups. Learnsets hang off the group; encounters off the single version.</li>
+    <li><b>Generation is release date, not setting.</b> HeartGold/SoulSilver are a gen IV remake of gen II, set in Johto <i>and</i> Kanto. FireRed/LeafGreen, Let's Go and Brilliant Diamond/Shining Pearl are remakes too.</li>
+    <li><b>The API doesn't say which games are remakes, DLC or spin-offs</b> (Colosseum, XD, Champions), or that Red/Green is Japan-only.</li>
+  </ul>
+  <p class="model"><b>Model:</b> a seed table <code>ref.version_group_info</code> adds release year and game category; <code>bridge_version_group_region</code> lets one game have two regions; version-group <code>order</code> (1 to 32) becomes the timeline for move history.</p>
+</section>
+
+<section>
+  <h2><span class="n">2</span>What counts as "a Pokémon"</h2>
+  <div class="split">
+    <div><p class="cap">Species · 1,025</p><h3>The Pokédex entry</h3><p>Raichu. Evolution chains and Pokédexes work at this level.</p></div>
+    <div><p class="cap">Pokémon · 1,351</p><h3>A battle variety</h3><p>raichu and raichu-alola: own types, stats, abilities and moves.</p></div>
+    <div><p class="cap">Form · 1,579</p><h3>Any visual form</h3><p>Unown's 28 letters, Vivillon's 20 patterns. Cosmetic only.</p></div>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>The 326 extra varieties</th><th class="num">Count</th><th>What they are</th></tr></thead>
+    <tbody>
+      <tr><td>Mega Evolution</td><td class="num">97</td><td>Temporary, in battle, needs a Mega Stone (gens VI–VII, Legends: Z-A)</td></tr>
+      <tr><td>Regional form</td><td class="num">59</td><td>Alolan 19, Galarian 20, Hisuian 16, Paldean 4. Arrive generations after their species</td></tr>
+      <tr><td>Gigantamax</td><td class="num">34</td><td>Sword/Shield only; met in Max Raids</td></tr>
+      <tr><td>Totem, Primal</td><td class="num">14</td><td>Sun/Moon bosses; Primal Kyogre and Groudon</td></tr>
+      <tr><td>Other battle-only</td><td class="num">20</td><td>Aegislash Blade, Darmanitan Zen, Wishiwashi School</td></tr>
+      <tr><td>Other alternates</td><td class="num">102</td><td>Rotom appliances, Therian formes, Koraidon builds, cap Pikachu</td></tr>
+    </tbody>
+  </table></div>
+  <p>71 species are legendary, 23 mythical, 19 babies. Ultra Beasts and Paradox Pokémon are story categories with no flag in the API.</p>
+  <p class="model"><b>Model:</b> <code>dim_pokemon.form_category</code> so a count can say what it counts (most analysis wants <code>default</code>), and <code>introduced_generation</code> per variety: Alolan Raichu exists from gen VII, not gen I.</p>
+</section>
+
+<section>
+  <h2><span class="n">3</span>Types and the type chart</h2>
+  <div class="chips">
+    <span class="t" style="background:var(--t-normal)">Normal</span><span class="t" style="background:var(--t-fire)">Fire</span><span class="t" style="background:var(--t-water)">Water</span><span class="t" style="background:var(--t-grass)">Grass</span><span class="t" style="background:var(--t-electric)">Electric</span><span class="t" style="background:var(--t-ice)">Ice</span><span class="t" style="background:var(--t-fighting)">Fighting</span><span class="t" style="background:var(--t-poison)">Poison</span><span class="t" style="background:var(--t-ground)">Ground</span><span class="t" style="background:var(--t-flying)">Flying</span><span class="t" style="background:var(--t-psychic)">Psychic</span><span class="t" style="background:var(--t-bug)">Bug</span><span class="t" style="background:var(--t-rock)">Rock</span><span class="t" style="background:var(--t-ghost)">Ghost</span><span class="t" style="background:var(--t-dragon)">Dragon</span><span class="t" style="background:var(--t-dark)">Dark · II</span><span class="t" style="background:var(--t-steel)">Steel · II</span><span class="t" style="background:var(--t-fairy)">Fairy · VI</span>
+  </div>
+  <p>18 battle types: 15 in gen I, 17 in gens II–V, 18 from gen VI. The API has three more that no Pokémon has as its own typing: <b>Stellar</b> (Tera only), <b>???</b> (the move Curse) and <b>Shadow</b> (Colosseum/XD).</p>
+  <p><b>Two types multiply.</b> A Water/Flying defender takes 2 × 2 = 4× from Electric and 0× from Ground. Never add the multipliers.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Matchup</th><th>Before</th><th>After</th><th>Changed in</th></tr></thead>
+    <tbody>
+      <tr><td>Bug → Poison</td><td>2×</td><td>½×</td><td>Gen II</td></tr>
+      <tr><td>Poison → Bug</td><td>2×</td><td>1×</td><td>Gen II</td></tr>
+      <tr><td>Ghost → Psychic</td><td>0×</td><td>2×</td><td>Gen II</td></tr>
+      <tr><td>Ice → Fire</td><td>1×</td><td>½×</td><td>Gen II</td></tr>
+      <tr><td>Ghost → Steel</td><td>½×</td><td>1×</td><td>Gen VI</td></tr>
+      <tr><td>Dark → Steel</td><td>½×</td><td>1×</td><td>Gen VI</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><p><b>The physical/special split (gen IV).</b> Until Diamond/Pearl a damaging move's class came from its type alone. Normal, Fighting, Flying, Poison, Ground, Rock, Bug, Ghost and Steel moves were physical; Fire, Water, Grass, Electric, Psychic, Ice, Dragon and Dark moves were special. So Fire Punch was special, and Bite was a special move in gens II–III. The API stores only today's class per move.</p></div>
+  <p class="model"><b>Model:</b> <code>dim_type.type_role</code> keeps Stellar, ??? and Shadow out of the chart (2,677 rows, 15/17/18 squares); <code>dim_move.effective_damage_class</code> derives the gen I–III class from the move's type in that era.</p>
+</section>
+
+<section>
+  <h2><span class="n">4</span>Things that change between games</h2>
+  <p>PokeAPI records history in four different shapes. Each needs its own handling.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Field</th><th>Lists</th><th>Keyed by</th><th class="num">Rows</th></tr></thead>
+    <tbody>
+      <tr><td><code>past_types</code></td><td>the whole old typing</td><td>generation, up to and including</td><td class="num">36</td></tr>
+      <tr><td><code>past_stats</code></td><td>only the stats that changed</td><td>generation, up to and including</td><td class="num">235</td></tr>
+      <tr><td><code>past_abilities</code></td><td>only changed slots; empty = slot didn't exist</td><td>generation, up to and including</td><td class="num">569</td></tr>
+      <tr><td><code>move.past_values</code></td><td>only the fields that changed</td><td>version group, valid <b>before</b> it</td><td class="num">198</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Stats.</b> Gen I had five stats with one Special. Gen VI raised many older Pokémon: Pikachu's Defense went 30 → 40, Sp. Def 40 → 50.</li>
+    <li><b>Abilities</b> start in gen III, hidden abilities in gen V. Gengar had Levitate until gen VI and Cursed Body from gen VII.</li>
+    <li><b>Types.</b> 29 Pokémon changed type, mostly the gen VI Fairy retypes (Clefairy was Normal).</li>
+    <li><b>Moves.</b> 198 recorded changes to power, accuracy, PP, type or effect chance, 83 of them in X/Y.</li>
+  </ul>
+  <div class="callout"><p><b>The data corrects the docs.</b> PokeAPI's docs say <code>past_values.version_group</code> is when the old values applied. Bite lists <code>type: normal, version_group: gold-silver</code>, and Bite was Normal in Red/Blue but Dark from Gold/Silver. So the listed values are the old ones, valid up to that game.</p></div>
+  <p class="model"><b>Model:</b> stats, abilities and types are generation-dated facts, clamped so nothing exists before its mechanic or its Pokémon. <code>dim_move</code> is SCD type 2: 1,488 eras for 937 moves, and each learnset row points at the era live in its game.</p>
+</section>
+
+<section>
+  <h2><span class="n">5</span>Learnsets and TMs</h2>
+  <p>638,321 learnset rows. Methods: machine 372k, level-up 162k, tutor 50k, egg 35k, plus game-specific ones (Colosseum/XD shadow moves, Champions' "train").</p>
+  <ul>
+    <li><b>One move can be learnt at several levels in the same game.</b> Smeargle learns Sketch at levels 1, 11, 21 … 91.</li>
+    <li><b>Level 0</b> on a level-up row means "learnt on evolving" (Sun/Moon onwards, 1,092 rows).</li>
+    <li><b>DLC learnsets are folded into the base game</b>; Legends: Z-A has none yet.</li>
+  </ul>
+  <p class="cap">What TM26 teaches, game by game</p>
+  <div class="tm"><span>Red/Blue … Ultra Sun/Moon: earthquake ×20</span><span class="chg">Let's Go: poison-jab</span><span class="chg">Sword/Shield: scary-face</span><span class="chg">Scarlet/Violet: poison-tail</span><span class="chg">Legends: Z-A: energy-ball</span></div>
+  <p>2,372 machine rows: 2,142 TMs, 130 HMs, 100 TRs. TMs were single-use until gen V; HMs went away in gen VII; TRs existed only in gen VIII.</p>
+  <p class="model"><b>Model:</b> <code>level_learned_at</code> joins the key of <code>fact_pokemon_move</code> (the old key rejected the real data); new <code>fact_machine</code>, one row per TM per game.</p>
+</section>
+
+<section>
+  <h2><span class="n">6</span>Items and evolution</h2>
+  <p>2,223 items: misc 1,204, key items 391, machines 338, medicine 106, berries 74, Poké Balls 38. Held items arrived in gen II. Items matter in four places: wild held items, evolution, Mega Stones and machines.</p>
+  <p>540 evolution chains, 676 evolution rules, 18 triggers. Rules combine level, time of day, held item, known move, trade partner, party member, rain, even turning the console upside down (Inkay).</p>
+  <ul>
+    <li><b>Chains branch.</b> Eevee has eight evolutions; Tyrogue compares Attack and Defense.</li>
+    <li><b>Rules change by game.</b> Magnezone evolved at Mt. Coronet in gen IV and with a Thunder Stone from Sword/Shield.</li>
+    <li><b>Regional evolutions depend on region and form.</b> Pikachu becomes Alolan Raichu with a Thunder Stone only in Alola.</li>
+  </ul>
+  <p class="model"><b>Model:</b> <code>fact_evolution</code> gains <code>from_pokemon_key</code>, <code>to_pokemon_key</code> and <code>region_code</code>, so Pikachu → Raichu and Pikachu → Alolan Raichu are separate rows.</p>
+</section>
+
+<section>
+  <h2><span class="n">7</span>Wild encounters</h2>
+  <p>117,127 encounter rows, 66 methods, 30 kinds of condition (time, season, weather, swarm, Poké Radar, GBA cartridge in slot 2, story progress).</p>
+  <p>Classic games give each area fixed slots with fixed odds, for example 12 grass slots at 20/20/10/10/10/10/5/5/4/4/1/1 %. One Pokémon can fill several slots, so two identical rows are both real.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>The "chance" number means</th><th>For</th><th>Adds up to</th></tr></thead>
+    <tbody>
+      <tr><td>a percentage</td><td>grass, caves, surfing, fishing</td><td>100 per area, game, method and conditions</td></tr>
+      <tr><td>a relative weight</td><td>Let's Go and Sword/Shield overworld spawns, raids</td><td>1,100 or more</td></tr>
+      <tr><td>nothing</td><td>gifts, static legendaries, trades, roamers</td><td>always 100, per Pokémon</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><p><b>Coverage stops at Sword/Shield.</b> PokeAPI has no wild-encounter data for Brilliant Diamond/Shining Pearl, Legends: Arceus, Scarlet/Violet or later.</p></div>
+  <p class="model"><b>Model:</b> <code>dim_encounter_method.chance_unit</code> says which meaning applies; <code>dim_version_group.has_encounter_data</code> flags the gap.</p>
+</section>
+
+<section>
+  <h2><span class="n">8</span>Pokédexes</h2>
+  <p>35 Pokédexes: the National Dex plus regional ones, often several per game (Kalos Central, Coastal and Mountain; Sword/Shield's Galar, Isle of Armor and Crown Tundra). Pikachu is #25 nationally and #74 in Paldea. Since Sword/Shield, a game's regional dex decides which Pokémon are in it.</p>
+  <p class="model"><b>Model:</b> new <code>dim_pokedex</code>, <code>fact_pokedex_entry</code> (8,010 rows) and <code>bridge_version_group_pokedex</code>.</p>
+</section>
+
+<section>
+  <h2><span class="n">9</span>Lore, briefly</h2>
+  <ul>
+    <li><b>Regions are modelled on real places:</b> Kanto, Johto, Hoenn and Sinnoh on Japan; Unova on New York; Kalos on northern France; Alola on Hawaii; Galar on the UK; Paldea on Iberia. Kanto and Johto border each other. Hisui is ancient Sinnoh.</li>
+    <li><b>Creation myth:</b> Arceus made Dialga (time), Palkia (space) and Giratina, then the lake guardians Uxie, Mesprit and Azelf. Mew is said to carry the DNA of every Pokémon.</li>
+    <li><b>Professors</b> catalogue each region; Professor Oak's first Pokédex had 151 entries, the National Dex now has 1,025.</li>
+    <li><b>The League:</b> eight gym badges, then the Elite Four and the Champion. Gyms specialise in one type, which is why type matchups dominate play.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">10</span>Sources</h2>
+  <ul class="note">
+    <li>Bulbapedia: Generation, Type, Type chart, Form, Methods of evolution, Wild Pokémon, Item, Pokémon world.</li>
+    <li>PokeAPI source data: github.com/PokeAPI/pokeapi (data/v2/csv) and github.com/PokeAPI/api-data (every API response as JSON), both as of 7 Oct 2026.</li>
+    <li>Full notes: <code>pokeapi/domain/pokemon_domain_notes.md</code> in the project folder.</li>
+  </ul>
+</section>
+</main>

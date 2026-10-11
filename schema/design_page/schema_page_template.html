@@ -1,0 +1,149 @@
+<title>Pokeplan Star Schema</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one centred reading column; each fact is a card with grain sentence, star diagram, example rows. Facts amber, dimensions teal. */
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --ink: #18222b; --muted: #55636e; --line: #cfd8de;
+  --dim: #0b6266; --dim-soft: #e0f0f0; --fact: #9a5200; --fact-soft: #fcecd6; --edge: #9fb0bb;
+  --new: #6b3fa0; --new-soft: #efe7f8;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171c; --surface: #18222a; --ink: #e6ecf0; --muted: #a3b1bb; --line: #2e3c47;
+    --dim: #6fd0d3; --dim-soft: #173a40; --fact: #f3ac4f; --fact-soft: #3d2b12; --edge: #4d606d;
+    --new: #c7a6f0; --new-soft: #2c2140; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171c; --surface: #18222a; --ink: #e6ecf0; --muted: #a3b1bb; --line: #2e3c47;
+  --dim: #6fd0d3; --dim-soft: #173a40; --fact: #f3ac4f; --fact-soft: #3d2b12; --edge: #4d606d;
+  --new: #c7a6f0; --new-soft: #2c2140; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--f-body); padding-inline: 20px; padding-block: 40px 80px; }
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 48px; }
+section { display: grid; gap: 16px; min-width: 0; }
+h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
+h1 { font: 700 clamp(2.1rem, 5vw, 3rem)/1.1 var(--f-display); letter-spacing: -0.02em; }
+h2 { font: 700 1.6rem/1.2 var(--f-display); }
+p { margin: 0; }
+.lede { font-size: 1.15rem; color: var(--muted); }
+code { font-family: var(--f-mono); font-size: 0.85em; }
+a { color: inherit; }
+.key { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.key div { display: flex; gap: 10px; align-items: center; }
+.sw { width: 34px; height: 22px; border-radius: 4px; border: 2px solid; flex: none; }
+.sw.f { background: var(--fact-soft); border-color: var(--fact); }
+.sw.d { background: var(--dim-soft); border-color: var(--dim); }
+.explain { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px; display: grid; gap: 10px; }
+.changes { background: var(--new-soft); border-radius: 8px; padding: 20px 22px; display: grid; gap: 12px; }
+.changes h2 { color: var(--new); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 700 0.75rem/1.3 var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: 0; }
+.boxed { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.fn { font: 700 0.9rem var(--f-mono); color: var(--fact); text-decoration: none; white-space: nowrap; }
+.fn:hover { text-decoration: underline; }
+.dn { font: 700 0.9rem var(--f-mono); color: var(--dim); white-space: nowrap; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 24px; display: grid; gap: 16px; min-width: 0; }
+.fact h3 { font: 700 1.25rem/1.2 var(--f-mono); color: var(--fact); overflow-wrap: anywhere; }
+.q { color: var(--muted); }
+.grain { font-size: 1.1rem; font-weight: 600; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.tag { font: 700 0.72rem/1 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; background: var(--fact); color: var(--surface); padding: 5px 8px; border-radius: 4px; }
+.diagram { overflow-x: auto; }
+.diagram svg { display: block; width: 100%; max-width: 820px; margin: 0 auto; min-width: 600px; height: auto; }
+.ln { stroke: var(--edge); stroke-width: 2; }
+.db { fill: var(--dim-soft); stroke: var(--dim); stroke-width: 2; }
+.fb { fill: var(--fact-soft); stroke: var(--fact); stroke-width: 2.5; }
+.dt { fill: var(--dim); font: 700 14px var(--f-mono); text-anchor: middle; }
+.dr { fill: var(--muted); font: 400 12.5px var(--f-body); text-anchor: middle; }
+.ft { fill: var(--fact); font: 700 17px var(--f-mono); text-anchor: middle; }
+.example { display: grid; gap: 8px; }
+.cap { font: 700 0.75rem/1 var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.example table { background: var(--bg); border-radius: 6px; }
+.why { color: var(--muted); font-size: 1rem; }
+.note { color: var(--muted); font-size: 0.95rem; }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
+</style>
+
+<main>
+<header style="display:grid;gap:14px">
+  <h1>Pokeplan Star Schema</h1>
+  <p class="lede">How the PokeAPI data is arranged in the database so it is easy to ask questions of it.</p>
+  <div class="key">
+    <div><span class="sw f"></span><span><b>Fact table</b>: things that happen or link together</span></div>
+    <div><span class="sw d"></span><span><b>Dimension</b>: the details you filter and group by</span></div>
+  </div>
+</header>
+
+<section>
+  <h2>The idea in three sentences</h2>
+  <div class="explain">
+    <p>A <b>star schema</b> puts one fact table in the middle and connects it to dimension tables around it, so a diagram of it looks like a star.</p>
+    <p>The <b>grain</b> is a plain sentence saying what one row of a table means. You decide it before choosing any columns, and every row must match it.</p>
+    <p>A good test of the grain: if two rows describe exactly the same thing, the grain is wrong or the data has a duplicate.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Why time matters here</h2>
+  <div class="explain">
+    <p>The Pokémon games span 30 years, and the rules changed along the way. A move, a Pokémon's stats or a type matchup can be different in Red/Blue and in Scarlet/Violet.</p>
+    <p>So several tables say <b>when</b> a row was true: either a range of <b>generations</b> (I to IX), or, for moves, a range of <b>games</b>. To ask "what was it like in generation 3?", you keep the rows whose range includes 3.</p>
+    <p class="note">The <a href="https://claude.ai/artifact/D1vpWbwT6wvCJVb66M8EKs">Pokémon Domain Guide</a> explains the game rules behind each choice.</p>
+  </div>
+</section>
+
+<section class="changes">
+  <h2>What changed in this version</h2>
+  <ul>__CHANGES__</ul>
+</section>
+
+<section>
+  <h2>The __NFACT__ fact tables at a glance</h2>
+  <div class="boxed scroll"><table>
+    <thead><tr><th>Fact table</th><th>One row means</th></tr></thead>
+    <tbody>__GLANCE__</tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Each fact table, one at a time</h2>
+  <p class="note">Example rows use readable names. In the real tables those names are stored in the dimensions, and the fact holds a number that points to them. The examples are real values from PokeAPI.</p>
+  __CARDS__
+</section>
+
+<section>
+  <h2>The __NDIM__ dimensions</h2>
+  <p>Each dimension describes one kind of thing, one row per thing. Several fact tables share the same dimension, so <code>dim_pokemon</code> means the same in every star. Two small bridge tables link a game to its regions and to its Pokédexes, because one game can have several of each.</p>
+  <div class="boxed scroll"><table>
+    <thead><tr><th>Dimension</th><th>One row means</th><th>Useful columns</th></tr></thead>
+    <tbody>__DIMS__</tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>How data gets there</h2>
+  <div class="explain">
+    <p><b>1. Raw.</b> Each API response is saved exactly as received.</p>
+    <p><b>2. Reference.</b> A few small tables hold game knowledge the API doesn't have, such as when abilities were introduced and which games are remakes.</p>
+    <p><b>3. Staging.</b> Views unpack the nested JSON into flat rows, one view per grain, and turn the API's history fields into date ranges.</p>
+    <p><b>4. Star.</b> A load step fills the dimensions and facts above. Running it twice gives the same result.</p>
+  </div>
+  <p class="note">Tested on the full real dataset (13,671 API responses, taken from PokeAPI's published copy on GitHub because the live site is blocked here). The load takes about 40 seconds and every test passes. The SQL is in the project folder under <code>pokeapi/schema/</code>, with a README giving the order to run the files.</p>
+</section>
+
+<section>
+  <h2>Left for later</h2>
+  <ul>
+    <li>Names in other languages (the model keeps English names for now).</li>
+    <li>Loading only what changed, instead of rebuilding the fact tables each run.</li>
+    <li>Encounters for games after Sword/Shield, when PokeAPI adds them.</li>
+  </ul>
+</section>
+</main>

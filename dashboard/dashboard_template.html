@@ -1,0 +1,361 @@
+<title>Pokédex Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: filters in one row, then KPI tiles, then charts two-up on desktop and stacked on phones.
+   Series colours are the validated reference palette (slots 1-3); the type chart uses a blue-grey-red diverging scale. */
+:root{
+  --bg:#f7f8fa; --surface:#ffffff; --sunk:#eef1f5; --fg:#141a22; --muted:#4a5565; --line:#d3d9e1; --grid:#e6e9ee;
+  --accent:#a24f07; --accent-bg:#fbeedd;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0ca30c; --good-text:#006300;
+  --d-0:#104281; --d-half:#86b6ef; --d-1:#f0efec; --d-2:#e34948; --on-dark:#ffffff; --on-light:#0b0b0b;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111418; --surface:#191d23; --sunk:#0f1215; --fg:#eef1f5; --muted:#b4bdc9; --line:#39424f; --grid:#2a313b;
+  --accent:#f3ae6b; --accent-bg:#3a2a1b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --good:#0ca30c; --good-text:#5fd35f;
+  --d-0:#104281; --d-half:#86b6ef; --d-1:#383835; --d-2:#e66767; --on-dark:#ffffff; --on-light:#0b0b0b; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111418; --surface:#191d23; --sunk:#0f1215; --fg:#eef1f5; --muted:#b4bdc9; --line:#39424f; --grid:#2a313b;
+  --accent:#f3ae6b; --accent-bg:#3a2a1b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --good:#0ca30c; --good-text:#5fd35f;
+  --d-0:#104281; --d-half:#86b6ef; --d-1:#383835; --d-2:#e66767; --on-dark:#ffffff; --on-light:#0b0b0b; color-scheme:dark }
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.6 var(--body);padding-inline:16px;padding-block:28px 72px}
+main{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1,h2,h3{margin:0;line-height:1.2;text-wrap:balance;font-weight:600}
+h1{font-size:clamp(28px,5vw,38px)} h2{font-size:20px}
+p{margin:0}
+.muted{color:var(--muted)}
+code{font-family:var(--mono);font-size:.88em}
+
+/* pipeline strip */
+.pipe{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.pipe-head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline}
+.ok{display:inline-flex;gap:6px;align-items:center;font-weight:600;color:var(--good-text)}
+.ok svg{flex:none}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;list-style:none;margin:0;padding:0}
+@media (max-width:760px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.steps li{background:var(--sunk);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.steps .k{font:600 13px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.steps .v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.steps .d{font-size:14px;color:var(--muted)}
+
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+@media (max-width:620px){.filters{position:static}}
+.filters label{display:flex;gap:10px;align-items:center;font-weight:600}
+select{font:16px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--s1)}
+select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* KPI tiles */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi .k{font-size:15px;color:var(--muted)}
+.kpi .v{font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15;overflow-wrap:anywhere}
+.kpi .d{font-size:14px;color:var(--muted)}
+
+/* charts */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.wide{grid-column:1/-1}
+.card .sub{font-size:15px;color:var(--muted)}
+.chart{position:relative;min-width:0}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.hscroll{overflow-x:auto}
+.hscroll svg{min-width:560px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:15px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block;flex:none}
+details{font-size:15px}
+summary{cursor:pointer;color:var(--muted);font-weight:600}
+.tbl-wrap{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:15px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{font-size:13px;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right}
+.hint{display:none}
+@media (max-width:620px){.hint{display:block}}
+.tag{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;white-space:nowrap}
+
+svg text{fill:var(--fg);font-family:var(--body);font-size:13px}
+svg .ax{fill:var(--muted);font-size:12.5px}
+svg .gl{stroke:var(--grid);stroke-width:1}
+svg .base{stroke:var(--muted);stroke-width:1}
+svg .hit{fill:transparent;cursor:default}
+svg .dim{opacity:.32}
+
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);font-size:14px;line-height:1.45;padding:8px 10px;border-radius:8px;max-width:260px;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.tip b{font-weight:600}
+@media (prefers-reduced-motion:no-preference){svg rect,svg path,svg circle{transition:opacity .15s}}
+</style>
+
+<main>
+<header style="display:flex;flex-direction:column;gap:10px">
+  <h1>Pokédex Dashboard</h1>
+  <p class="muted" style="max-width:70ch">Every number here comes out of the Pokeplan pipeline: raw API responses, loaded into the star schema, tested, then read through four serving views.</p>
+</header>
+
+<section class="pipe" aria-label="Last pipeline run">
+  <div class="pipe-head">
+    <span class="ok"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--good)"/><path d="M5.5 10.5l3 3 6-6.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="run-status">Last run succeeded</span></span>
+    <span class="muted" id="run-meta"></span>
+  </div>
+  <ol class="steps" id="steps"></ol>
+</section>
+
+<div class="filters" role="group" aria-label="Filters">
+  <label for="f-gen">Generation
+    <select id="f-gen"><option value="0">All generations</option></select>
+  </label>
+  <label for="f-leg"><input type="checkbox" id="f-leg" checked> Include legendary and mythical</label>
+</div>
+
+<section class="kpis" id="kpis" aria-label="Summary"></section>
+
+<div class="grid">
+  <section class="card">
+    <h2>New Pokémon in each generation</h2>
+    <p class="sub">Species first introduced in that generation. Not affected by the filters; the chosen generation is highlighted.</p>
+    <div class="legend" id="leg-a"></div>
+    <div class="chart" id="c-a"></div>
+    <details><summary>Show the numbers</summary><div class="tbl-wrap" id="t-a"></div></details>
+  </section>
+
+  <section class="card">
+    <h2>Are newer Pokémon stronger?</h2>
+    <p class="sub" id="sub-b">Average base stat total of each generation's species, using today's stats.</p>
+    <div class="chart" id="c-b"></div>
+    <details><summary>Show the numbers</summary><div class="tbl-wrap" id="t-b"></div></details>
+  </section>
+
+  <section class="card">
+    <h2>Most common types</h2>
+    <p class="sub" id="sub-c">Pokémon that have each type today, as first or second type.</p>
+    <div class="chart" id="c-c"></div>
+    <details><summary>Show the numbers</summary><div class="tbl-wrap" id="t-c"></div></details>
+  </section>
+
+  <section class="card">
+    <h2>Strongest Pokémon</h2>
+    <p class="sub" id="sub-e">Top 10 by base stat total.</p>
+    <div class="tbl-wrap" id="t-e"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>Type chart</h2>
+    <p class="sub" id="sub-d"></p>
+    <div class="legend" id="leg-d"></div>
+    <p class="hint muted" style="font-size:15px">On a phone, scroll the chart sideways to see every type.</p>
+    <div class="chart hscroll" id="c-d"></div>
+  </section>
+</div>
+
+<p class="muted" style="font-size:15px">Built from <code>serve.pokemon_card</code>, <code>serve.type_chart</code>, <code>serve.generation</code> and <code>serve.pipeline_run</code>. Re-run <code>pokeapi/dashboard/run_pipeline.sh</code> to refresh.</p>
+</main>
+
+<div class="tip" id="tip" hidden></div>
+<script id="data" type="application/json">{{DATA}}</script>
+<script>
+(function(){
+var D = JSON.parse(document.getElementById('data').textContent);
+var P = D.pokemon.map(function(r){return {dex:r[0],name:r[1],gen:r[2],rarity:r[3],t1:r[4],t2:r[5],stats:r.slice(6,12),bst:r[12]};});
+var GENS = D.generations;
+var TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
+var NS = 'http://www.w3.org/2000/svg';
+var state = {gen:0, legends:true};
+var fmt = function(n){return n.toLocaleString('en-GB');};
+var cap = function(s){return s.charAt(0).toUpperCase()+s.slice(1);};
+var genLabel = function(g){var x=GENS[g-1]; return 'Gen '+x.roman;};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+// ---------- tooltip ----------
+var tip = document.getElementById('tip');
+function showTip(html, ev){
+  tip.innerHTML = html; tip.hidden = false;
+  var x = ev.clientX + window.scrollX + 14, y = ev.clientY + window.scrollY + 14;
+  var w = tip.offsetWidth; if (x + w > window.scrollX + document.documentElement.clientWidth - 8) x = ev.clientX + window.scrollX - w - 14;
+  tip.style.left = Math.max(8, x) + 'px'; tip.style.top = y + 'px';
+}
+function hideTip(){ tip.hidden = true; }
+function hover(el, html){
+  el.addEventListener('pointermove', function(e){ showTip(typeof html === 'function' ? html() : html, e); });
+  el.addEventListener('pointerleave', hideTip);
+}
+
+// ---------- svg helpers ----------
+function svgEl(tag, attrs, parent){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function text(parent, x, y, s, attrs){ var t = svgEl('text', Object.assign({x:x,y:y}, attrs||{}), parent); t.textContent = s; return t; }
+function topRounded(x,y,w,h,r){ r=Math.min(r,w/2,h); return 'M'+x+','+(y+h)+'V'+(y+r)+'Q'+x+','+y+' '+(x+r)+','+y+'H'+(x+w-r)+'Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+'V'+(y+h)+'Z'; }
+function rightRounded(x,y,w,h,r){ r=Math.min(r,h/2,w); return 'M'+x+','+y+'H'+(x+w-r)+'Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+'V'+(y+h-r)+'Q'+(x+w)+','+(y+h)+' '+(x+w-r)+','+(y+h)+'H'+x+'Z'; }
+function niceMax(v){ var p = Math.pow(10, Math.floor(Math.log10(v))); var m = v/p; return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; }
+function width(el){ return Math.max(300, el.clientWidth); }
+function table(head, rows, numeric){
+  return '<table><thead><tr>'+head.map(function(h,i){return '<th'+(numeric[i]?' class="n"':'')+'>'+h+'</th>';}).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(numeric[i]?' class="n"':'')+'>'+c+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
+}
+function legend(el, items){ el.innerHTML = items.map(function(i){return '<span><i class="sw" style="background:'+i[1]+'"></i>'+i[0]+'</span>';}).join(''); }
+
+function filtered(){ return P.filter(function(p){ return (state.gen===0 || p.gen===state.gen) && (state.legends || p.rarity==='regular'); }); }
+
+// ---------- pipeline strip ----------
+(function(){
+  var r = D.run, facts = 0; for (var k in D.mart_rows) facts += D.mart_rows[k];
+  var when = new Date(r.finished_at);
+  document.getElementById('run-status').textContent = r.status === 'succeeded' ? 'Last run succeeded' : 'Last run: ' + r.status;
+  document.getElementById('run-meta').textContent = 'Batch ' + r.batch_id + ' · ' + r.notes + ' · finished ' + when.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC';
+  var steps = [
+    ['Extract', '21', 'endpoints from the api-data repo'],
+    ['Land', fmt(r.raw_responses), 'raw JSON responses'],
+    ['Transform', fmt(facts), 'rows in 10 fact tables'],
+    ['Test', '27 / 27', 'checks passed'],
+    ['Serve', '4', 'views feed this page']
+  ];
+  document.getElementById('steps').innerHTML = steps.map(function(s){return '<li><span class="k">'+s[0]+'</span><span class="v">'+s[1]+'</span><span class="d">'+s[2]+'</span></li>';}).join('');
+})();
+
+// ---------- filters ----------
+var fGen = document.getElementById('f-gen'), fLeg = document.getElementById('f-leg');
+GENS.forEach(function(g){ var o = document.createElement('option'); o.value = g.generation; o.textContent = 'Generation ' + g.roman + ' (' + cap(g.region) + ', ' + g.year + ')'; fGen.appendChild(o); });
+fGen.addEventListener('change', function(){ state.gen = +fGen.value; render(); });
+fLeg.addEventListener('change', function(){ state.legends = fLeg.checked; render(); });
+
+// ---------- KPIs ----------
+function typeCounts(list){
+  var c = {}; TYPES.forEach(function(t){ c[t] = {first:0, second:0}; });
+  list.forEach(function(p){ if (c[p.t1]) c[p.t1].first++; if (p.t2 && c[p.t2]) c[p.t2].second++; });
+  return c;
+}
+function renderKpis(list){
+  var avg = list.length ? Math.round(list.reduce(function(s,p){return s+p.bst;},0)/list.length) : 0;
+  var leg = list.filter(function(p){return p.rarity!=='regular';}).length;
+  var tc = typeCounts(list), top = TYPES.slice().sort(function(a,b){return (tc[b].first+tc[b].second)-(tc[a].first+tc[a].second);})[0];
+  var scope = state.gen ? 'in Generation ' + GENS[state.gen-1].roman : 'across all generations';
+  var k = [
+    ['Pokémon', fmt(list.length), scope],
+    ['Average base stat total', fmt(avg), 'sum of the six base stats'],
+    ['Legendary and mythical', state.legends ? fmt(leg) : 'Hidden', state.legends ? 'of ' + fmt(list.length) : 'filter is off'],
+    ['Most common type', list.length ? top : '-', list.length ? fmt(tc[top].first + tc[top].second) + ' Pokémon' : '']
+  ];
+  document.getElementById('kpis').innerHTML = k.map(function(x){return '<div class="kpi"><span class="k">'+x[0]+'</span><span class="v">'+x[1]+'</span><span class="d">'+x[2]+'</span></div>';}).join('');
+}
+
+// ---------- A: new species per generation (stacked) ----------
+var SERIES = [['regular','Regular','var(--s1)'],['legendary','Legendary','var(--s2)'],['mythical','Mythical','var(--s3)']];
+function renderA(){
+  var el = document.getElementById('c-a'); el.innerHTML = '';
+  legend(document.getElementById('leg-a'), SERIES.map(function(s){return [s[1], s[2]];}));
+  var rows = GENS.map(function(g){ var ps = P.filter(function(p){return p.gen===g.generation;}); var o = {g:g, total:ps.length}; SERIES.forEach(function(s){ o[s[0]] = ps.filter(function(p){return p.rarity===s[0];}).length; }); return o; });
+  var W = width(el), H = 260, m = {l:40, r:8, t:10, b:30}, iw = W-m.l-m.r, ih = H-m.t-m.b;
+  var max = niceMax(Math.max.apply(null, rows.map(function(r){return r.total;})));
+  var svg = svgEl('svg', {viewBox:'0 0 '+W+' '+H, role:'img', 'aria-label':'Stacked bar chart of new species per generation'}, el);
+  for (var t=0; t<=4; t++){ var v = max*t/4, y = m.t+ih-ih*v/max; svgEl('line',{x1:m.l,x2:W-m.r,y1:y,y2:y,class:t?'gl':'base'},svg); text(svg, m.l-6, y+4, fmt(v), {class:'ax','text-anchor':'end'}); }
+  var band = iw/rows.length, bw = Math.min(44, band*0.62);
+  rows.forEach(function(r,i){
+    var x = m.l + band*i + (band-bw)/2, y0 = m.t+ih, g = svgEl('g', {class: state.gen && state.gen!==r.g.generation ? 'dim' : ''}, svg);
+    var stackTop = SERIES.filter(function(s){return r[s[0]]>0;}).slice(-1)[0][0];
+    SERIES.forEach(function(s){
+      if (!r[s[0]]) return;
+      var h = ih*r[s[0]]/max, y = y0-h;
+      var gap = s[0]===stackTop ? 0 : 2;
+      svgEl('path', {d: s[0]===stackTop ? topRounded(x,y,bw,h,4) : 'M'+x+','+(y+gap)+'h'+bw+'v'+(h-gap)+'h'+(-bw)+'Z', fill:s[2]}, g);
+      y0 = y;
+    });
+    text(svg, m.l+band*i+band/2, H-10, r.g.roman, {class:'ax','text-anchor':'middle'});
+    var hit = svgEl('rect', {x:m.l+band*i, y:m.t, width:band, height:ih, class:'hit'}, svg);
+    hover(hit, '<b>Generation '+r.g.roman+'</b> ('+cap(r.g.region)+', '+r.g.year+')<br>'+r.total+' new species<br>'+r.regular+' regular, '+r.legendary+' legendary, '+r.mythical+' mythical');
+  });
+  document.getElementById('t-a').innerHTML = table(['Generation','Regular','Legendary','Mythical','Total'], rows.map(function(r){return [r.g.roman+' ('+cap(r.g.region)+')', r.regular, r.legendary, r.mythical, r.total];}), [0,1,1,1,1]);
+}
+
+// ---------- B: average base stat total by generation (line) ----------
+function renderB(){
+  var el = document.getElementById('c-b'); el.innerHTML = '';
+  document.getElementById('sub-b').textContent = 'Average base stat total of each generation\'s ' + (state.legends ? 'species' : 'regular species (legendary and mythical left out)') + ', using today\'s stats.';
+  var rows = GENS.map(function(g){ var ps = P.filter(function(p){return p.gen===g.generation && (state.legends || p.rarity==='regular');}); return {g:g, n:ps.length, avg: ps.reduce(function(s,p){return s+p.bst;},0)/ps.length}; });
+  var vals = rows.map(function(r){return r.avg;}), lo = Math.floor((Math.min.apply(null,vals)-15)/20)*20, hi = Math.ceil((Math.max.apply(null,vals)+15)/20)*20;
+  var W = width(el), H = 260, m = {l:40, r:16, t:16, b:30}, iw = W-m.l-m.r, ih = H-m.t-m.b;
+  var sx = function(i){return m.l + iw*(i+0.5)/rows.length;}, sy = function(v){return m.t + ih - ih*(v-lo)/(hi-lo);};
+  var svg = svgEl('svg', {viewBox:'0 0 '+W+' '+H, role:'img', 'aria-label':'Line chart of average base stat total by generation'}, el);
+  for (var v=lo; v<=hi; v+=20){ var y = sy(v); svgEl('line',{x1:m.l,x2:W-m.r,y1:y,y2:y,class:v===lo?'base':'gl'},svg); text(svg, m.l-6, y+4, v, {class:'ax','text-anchor':'end'}); }
+  svgEl('polyline', {points: rows.map(function(r,i){return sx(i)+','+sy(r.avg);}).join(' '), fill:'none', stroke:'var(--s1)', 'stroke-width':2, 'stroke-linejoin':'round'}, svg);
+  rows.forEach(function(r,i){
+    var sel = state.gen===r.g.generation;
+    svgEl('circle', {cx:sx(i), cy:sy(r.avg), r: sel?7:5, fill:'var(--s1)', stroke:'var(--surface)', 'stroke-width':2}, svg);
+    text(svg, sx(i), H-10, r.g.roman, {class:'ax','text-anchor':'middle', 'font-weight': sel?600:400});
+    if (i===0 || i===rows.length-1 || sel) text(svg, sx(i), sy(r.avg)-12, Math.round(r.avg), {'text-anchor':'middle','font-weight':600});
+    var hit = svgEl('rect', {x:sx(i)-iw/rows.length/2, y:m.t, width:iw/rows.length, height:ih, class:'hit'}, svg);
+    hover(hit, '<b>Generation '+r.g.roman+'</b><br>Average base stat total: '+Math.round(r.avg)+'<br>across '+r.n+' species');
+  });
+  document.getElementById('t-b').innerHTML = table(['Generation','Species','Average base stat total'], rows.map(function(r){return [r.g.roman, r.n, Math.round(r.avg)];}), [0,1,1]);
+}
+
+// ---------- C: type counts (horizontal bars) ----------
+function renderC(list){
+  var el = document.getElementById('c-c'); el.innerHTML = '';
+  var tc = typeCounts(list);
+  var rows = TYPES.map(function(t){return {t:t, first:tc[t].first, second:tc[t].second, total:tc[t].first+tc[t].second};}).filter(function(r){return r.total>0;}).sort(function(a,b){return b.total-a.total || a.t.localeCompare(b.t);});
+  var W = width(el), row = 24, m = {l:78, r:40, t:4, b:4}, H = m.t+m.b+row*rows.length, iw = W-m.l-m.r;
+  var max = Math.max.apply(null, rows.map(function(r){return r.total;}).concat([1]));
+  var svg = svgEl('svg', {viewBox:'0 0 '+W+' '+H, role:'img', 'aria-label':'Bar chart of how many Pokémon have each type'}, el);
+  rows.forEach(function(r,i){
+    var y = m.t + row*i, w = iw*r.total/max, bh = row-8;
+    text(svg, m.l-8, y+row/2+4, r.t, {'text-anchor':'end'});
+    svgEl('path', {d: rightRounded(m.l, y+4, Math.max(w,1), bh, 4), fill:'var(--s1)'}, svg);
+    text(svg, m.l+w+6, y+row/2+4, r.total, {class:'ax'});
+    var hit = svgEl('rect', {x:0, y:y, width:W, height:row, class:'hit'}, svg);
+    hover(hit, '<b>'+r.t+'</b>: '+r.total+' Pokémon<br>'+r.first+' as first type, '+r.second+' as second');
+  });
+  document.getElementById('sub-c').textContent = 'Pokémon that have each type today, as first or second type' + (state.gen ? ', among those introduced in Generation ' + GENS[state.gen-1].roman : '') + '.';
+  document.getElementById('t-c').innerHTML = table(['Type','First type','Second type','Total'], rows.map(function(r){return [r.t, r.first, r.second, r.total];}), [0,1,1,1]);
+}
+
+// ---------- D: type chart heatmap ----------
+var MULT = {'0':['0','No effect','var(--d-0)','var(--on-dark)'], '0.5':['½','Not very effective','var(--d-half)','var(--on-light)'], '1':['','Normal damage','var(--d-1)','var(--fg)'], '2':['2','Super effective','var(--d-2)','var(--on-light)']};
+function renderD(){
+  var el = document.getElementById('c-d'); el.innerHTML = '';
+  var gen = state.gen || 9, gname = GENS[gen-1];
+  document.getElementById('sub-d').textContent = 'Damage multiplier when the row\'s type attacks the column\'s type, as it stood in Generation ' + gname.roman + (state.gen ? '' : ' (today)') + '. Gen I had 15 types; Dark and Steel arrived in Gen II and Fairy in Gen VI.';
+  legend(document.getElementById('leg-d'), [['2× super effective','var(--d-2)'],['½× not very effective','var(--d-half)'],['0× no effect','var(--d-0)'],['1× normal (blank)','var(--d-1)']]);
+  var cells = {}; D.type_chart.forEach(function(c){ if (c[0]===gen) cells[c[1]+'|'+c[2]] = String(+c[3]); });
+  var types = TYPES.filter(function(t){ return cells[t+'|'+t] !== undefined; });
+  var cs = 32, m = {l:84, t:72}, W = m.l + cs*types.length + 4, H = m.t + cs*types.length + 4;
+  var svg = svgEl('svg', {viewBox:'0 0 '+W+' '+H, role:'img', 'aria-label':'Type effectiveness chart for Generation '+gname.roman}, el);
+  svg.style.maxWidth = W*1.2 + 'px';
+  text(svg, m.l-8, m.t-8, 'Attacking ↓', {class:'ax','text-anchor':'end'});
+  types.forEach(function(d,j){ var x = m.l + cs*j + cs/2; text(svg, 0, 0, d, {class:'ax', transform:'translate('+(x+4)+','+(m.t-8)+') rotate(-55)'}); });
+  types.forEach(function(a,i){
+    var y = m.t + cs*i;
+    text(svg, m.l-8, y+cs/2+4, a, {'text-anchor':'end'});
+    types.forEach(function(d,j){
+      var v = cells[a+'|'+d], s = MULT[v] || MULT['1'], x = m.l + cs*j;
+      svgEl('rect', {x:x+1, y:y+1, width:cs-2, height:cs-2, rx:3, fill:s[2]}, svg);
+      if (s[0]) text(svg, x+cs/2, y+cs/2+5, s[0], {'text-anchor':'middle', fill:s[3], 'font-weight':600, style:'fill:'+s[3]});
+      var hit = svgEl('rect', {x:x, y:y, width:cs, height:cs, class:'hit'}, svg);
+      hover(hit, '<b>'+a+'</b> attacking <b>'+d+'</b><br>'+(+v)+'× · '+s[1]);
+    });
+  });
+}
+
+// ---------- E: top 10 ----------
+function renderE(list){
+  var top = list.slice().sort(function(a,b){return b.bst-a.bst || a.dex-b.dex;}).slice(0,10);
+  document.getElementById('sub-e').textContent = 'Top 10 by base stat total' + (state.gen ? ' in Generation ' + GENS[state.gen-1].roman : '') + (state.legends ? '.' : ', legendary and mythical left out.');
+  document.getElementById('t-e').innerHTML = top.length ? table(['#','Pokémon','Type','Gen','Total'], top.map(function(p,i){
+    return [i+1, esc(p.name) + (p.rarity!=='regular' ? ' <span class="tag">'+cap(p.rarity)+'</span>' : ''), esc(p.t1 + (p.t2 ? ' / '+p.t2 : '')), GENS[p.gen-1].roman, p.bst];
+  }), [1,0,0,0,1]) : '<p class="muted">No Pokémon match these filters.</p>';
+}
+
+function render(){ hideTip(); var list = filtered(); renderKpis(list); renderA(); renderB(); renderC(list); renderD(); renderE(list); }
+render();
+var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt = setTimeout(render, 150); });
+})();
+</script>

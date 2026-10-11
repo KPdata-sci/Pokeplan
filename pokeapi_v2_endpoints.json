@@ -1,0 +1,1033 @@
+{
+  "conventions": {
+    "methods": "GET only (consumption-only API)",
+    "auth": "none",
+    "rate_limit": "none since static hosting (Nov 2018); fair use policy applies, abusers IP-banned",
+    "fair_use": [
+      "Locally cache resources whenever you request them",
+      "Be nice to fellow developers",
+      "Report security vulnerabilities responsibly"
+    ],
+    "pagination": {
+      "default_limit": 20,
+      "params": [
+        "limit",
+        "offset"
+      ],
+      "example": "/api/v2/ability/?limit=60&offset=60",
+      "response_fields": [
+        "count",
+        "next",
+        "previous",
+        "results"
+      ]
+    },
+    "unnamed_endpoints": [
+      "contest-effect",
+      "super-contest-effect",
+      "evolution-chain",
+      "machine",
+      "characteristic"
+    ],
+    "url_placeholder": "Doc examples use $BASE_URL; real responses contain absolute https://pokeapi.co/api/v2/... URLs",
+    "id_extraction": "Every NamedAPIResource/APIResource carries a url ending in /{id}/; parse the trailing integer to get a foreign key"
+  },
+  "base_url": "https://pokeapi.co/api/v2",
+  "endpoints": [
+    {
+      "endpoint": "berry",
+      "group": "Berries",
+      "title": "Berries",
+      "path": "/berry/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Berry",
+      "returns_array": false,
+      "nested_models": [
+        "BerryFlavorMap"
+      ],
+      "references_endpoints": [
+        "berry-firmness",
+        "berry-flavor",
+        "item",
+        "type"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "berry-firmness",
+      "group": "Berries",
+      "title": "Berry Firmnesses",
+      "path": "/berry-firmness/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "BerryFirmness",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "berry",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "berry-flavor",
+      "group": "Berries",
+      "title": "Berry Flavors",
+      "path": "/berry-flavor/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "BerryFlavor",
+      "returns_array": false,
+      "nested_models": [
+        "FlavorBerryMap"
+      ],
+      "references_endpoints": [
+        "berry",
+        "contest-type",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "contest-type",
+      "group": "Contests",
+      "title": "Contest Types",
+      "path": "/contest-type/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "ContestType",
+      "returns_array": false,
+      "nested_models": [
+        "ContestName"
+      ],
+      "references_endpoints": [
+        "berry-flavor",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "contest-effect",
+      "group": "Contests",
+      "title": "Contest Effects",
+      "path": "/contest-effect/{id}/",
+      "named": false,
+      "list_model": "APIResourceList",
+      "primary_model": "ContestEffect",
+      "returns_array": false,
+      "nested_models": [
+        "ContestEffectFlavorText"
+      ],
+      "references_endpoints": [
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "super-contest-effect",
+      "group": "Contests",
+      "title": "Super Contest Effects",
+      "path": "/super-contest-effect/{id}/",
+      "named": false,
+      "list_model": "APIResourceList",
+      "primary_model": "SuperContestEffect",
+      "returns_array": false,
+      "nested_models": [
+        "SuperContestEffectFlavorText"
+      ],
+      "references_endpoints": [
+        "language",
+        "move"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "currency",
+      "group": "Currencies",
+      "title": "Currencies",
+      "path": "/currency/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Currency",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "encounter-method",
+      "group": "Encounters",
+      "title": "Encounter Methods",
+      "path": "/encounter-method/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "EncounterMethod",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "encounter-condition",
+      "group": "Encounters",
+      "title": "Encounter Conditions",
+      "path": "/encounter-condition/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "EncounterCondition",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "encounter-condition-value",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "encounter-condition-value",
+      "group": "Encounters",
+      "title": "Encounter Condition Values",
+      "path": "/encounter-condition-value/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "EncounterConditionValue",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "encounter-condition",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "evolution-chain",
+      "group": "Evolution",
+      "title": "Evolution Chains",
+      "path": "/evolution-chain/{id}/",
+      "named": false,
+      "list_model": "APIResourceList",
+      "primary_model": "EvolutionChain",
+      "returns_array": false,
+      "nested_models": [
+        "ChainLink",
+        "EvolutionDetail",
+        "EvolutionConditionExpression"
+      ],
+      "references_endpoints": [
+        "evolution-trigger",
+        "evolution-variable",
+        "item",
+        "location",
+        "move",
+        "nature",
+        "pokemon-form",
+        "pokemon-species",
+        "region",
+        "type",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "evolution-trigger",
+      "group": "Evolution",
+      "title": "Evolution Triggers",
+      "path": "/evolution-trigger/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "EvolutionTrigger",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "evolution-variable",
+      "group": "Evolution",
+      "title": "Evolution Variables",
+      "path": "/evolution-variable/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "EvolutionVariable",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "generation",
+      "group": "Games",
+      "title": "Generations",
+      "path": "/generation/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Generation",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "ability",
+        "language",
+        "move",
+        "pokemon-species",
+        "region",
+        "type",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokedex",
+      "group": "Games",
+      "title": "Pokedexes",
+      "path": "/pokedex/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Pokedex",
+      "returns_array": false,
+      "nested_models": [
+        "PokemonEntry"
+      ],
+      "references_endpoints": [
+        "language",
+        "pokemon-species",
+        "region",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "version",
+      "group": "Games",
+      "title": "Version",
+      "path": "/version/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Version",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "version-group",
+      "group": "Games",
+      "title": "Version Groups",
+      "path": "/version-group/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "VersionGroup",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "generation",
+        "move-learn-method",
+        "pokedex",
+        "region",
+        "version"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "item",
+      "group": "Items",
+      "title": "Item",
+      "path": "/item/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Item",
+      "returns_array": false,
+      "nested_models": [
+        "ItemSprites",
+        "ItemHolderPokemon",
+        "ItemHolderPokemonVersionDetail",
+        "ItemPrice"
+      ],
+      "references_endpoints": [
+        "currency",
+        "evolution-chain",
+        "generation",
+        "item-attribute",
+        "item-category",
+        "item-fling-effect",
+        "language",
+        "machine",
+        "pokemon",
+        "version",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "item-attribute",
+      "group": "Items",
+      "title": "Item Attributes",
+      "path": "/item-attribute/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "ItemAttribute",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "item",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "item-category",
+      "group": "Items",
+      "title": "Item Categories",
+      "path": "/item-category/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "ItemCategory",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "item",
+        "item-pocket",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "item-fling-effect",
+      "group": "Items",
+      "title": "Item Fling Effects",
+      "path": "/item-fling-effect/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "ItemFlingEffect",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "item",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "item-price",
+      "group": "Items",
+      "title": "Item Prices",
+      "path": "/item-price/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "ItemPrice",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "currency",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "item-pocket",
+      "group": "Items",
+      "title": "Item Pockets",
+      "path": "/item-pocket/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "ItemPocket",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "item-category",
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "location",
+      "group": "Locations",
+      "title": "Locations",
+      "path": "/location/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Location",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "generation",
+        "language",
+        "location-area",
+        "region"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "location-area",
+      "group": "Locations",
+      "title": "Location Areas",
+      "path": "/location-area/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "LocationArea",
+      "returns_array": false,
+      "nested_models": [
+        "EncounterMethodRate",
+        "EncounterVersionDetails",
+        "PokemonEncounter"
+      ],
+      "references_endpoints": [
+        "encounter-condition-value",
+        "encounter-method",
+        "language",
+        "location",
+        "pokemon",
+        "version"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pal-park-area",
+      "group": "Locations",
+      "title": "Pal Park Areas",
+      "path": "/pal-park-area/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "PalParkArea",
+      "returns_array": false,
+      "nested_models": [
+        "PalParkEncounterSpecies"
+      ],
+      "references_endpoints": [
+        "language",
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "region",
+      "group": "Locations",
+      "title": "Regions",
+      "path": "/region/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Region",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "generation",
+        "language",
+        "location",
+        "pokedex",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "machine",
+      "group": "Machines",
+      "title": "Machines",
+      "path": "/machine/{id}/",
+      "named": false,
+      "list_model": "APIResourceList",
+      "primary_model": "Machine",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "item",
+        "move",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "move",
+      "group": "Moves",
+      "title": "Moves",
+      "path": "/move/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Move",
+      "returns_array": false,
+      "nested_models": [
+        "ContestComboSets",
+        "ContestComboDetail",
+        "MoveFlavorText",
+        "MoveMetaData",
+        "MoveStatChange",
+        "PastMoveStatValues"
+      ],
+      "references_endpoints": [
+        "contest-effect",
+        "contest-type",
+        "generation",
+        "language",
+        "machine",
+        "move-ailment",
+        "move-category",
+        "move-damage-class",
+        "move-target",
+        "pokemon",
+        "stat",
+        "super-contest-effect",
+        "type",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "move-ailment",
+      "group": "Moves",
+      "title": "Move Ailments",
+      "path": "/move-ailment/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "MoveAilment",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "move"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "move-battle-style",
+      "group": "Moves",
+      "title": "Move Battle Styles",
+      "path": "/move-battle-style/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "MoveBattleStyle",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "move-category",
+      "group": "Moves",
+      "title": "Move Categories",
+      "path": "/move-category/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "MoveCategory",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "move"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "move-damage-class",
+      "group": "Moves",
+      "title": "Move Damage Classes",
+      "path": "/move-damage-class/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "MoveDamageClass",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "move"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "move-learn-method",
+      "group": "Moves",
+      "title": "Move Learn Methods",
+      "path": "/move-learn-method/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "MoveLearnMethod",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "move-target",
+      "group": "Moves",
+      "title": "Move Targets",
+      "path": "/move-target/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "MoveTarget",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "move"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "ability",
+      "group": "Pokémon",
+      "title": "Abilities",
+      "path": "/ability/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Ability",
+      "returns_array": false,
+      "nested_models": [
+        "AbilityEffectChange",
+        "AbilityFlavorText",
+        "AbilityPokemon"
+      ],
+      "references_endpoints": [
+        "generation",
+        "language",
+        "pokemon",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "characteristic",
+      "group": "Pokémon",
+      "title": "Characteristics",
+      "path": "/characteristic/{id}/",
+      "named": false,
+      "list_model": "APIResourceList",
+      "primary_model": "Characteristic",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "stat"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "egg-group",
+      "group": "Pokémon",
+      "title": "Egg Groups",
+      "path": "/egg-group/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "EggGroup",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "gender",
+      "group": "Pokémon",
+      "title": "Genders",
+      "path": "/gender/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Gender",
+      "returns_array": false,
+      "nested_models": [
+        "PokemonSpeciesGender"
+      ],
+      "references_endpoints": [
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "growth-rate",
+      "group": "Pokémon",
+      "title": "Growth Rates",
+      "path": "/growth-rate/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "GrowthRate",
+      "returns_array": false,
+      "nested_models": [
+        "GrowthRateExperienceLevel"
+      ],
+      "references_endpoints": [
+        "language",
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "nature",
+      "group": "Pokémon",
+      "title": "Natures",
+      "path": "/nature/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Nature",
+      "returns_array": false,
+      "nested_models": [
+        "NatureStatChange",
+        "MoveBattleStylePreference"
+      ],
+      "references_endpoints": [
+        "berry-flavor",
+        "language",
+        "move-battle-style",
+        "pokeathlon-stat",
+        "stat"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokeathlon-stat",
+      "group": "Pokémon",
+      "title": "Pokeathlon Stats",
+      "path": "/pokeathlon-stat/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "PokeathlonStat",
+      "returns_array": false,
+      "nested_models": [
+        "NaturePokeathlonStatAffectSets",
+        "NaturePokeathlonStatAffect"
+      ],
+      "references_endpoints": [
+        "language",
+        "nature"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokemon",
+      "group": "Pokémon",
+      "title": "Pokemon",
+      "path": "/pokemon/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Pokemon",
+      "returns_array": false,
+      "nested_models": [
+        "PokemonAbility",
+        "PokemonType",
+        "PokemonFormType",
+        "PokemonTypePast",
+        "PokemonAbilityPast",
+        "PokemonStatPast",
+        "PokemonHeldItem",
+        "PokemonHeldItemVersion",
+        "PokemonMove",
+        "PokemonMoveVersion",
+        "PokemonStat",
+        "PokemonSprites",
+        "PokemonCries"
+      ],
+      "references_endpoints": [
+        "ability",
+        "generation",
+        "item",
+        "move",
+        "move-learn-method",
+        "pokemon-form",
+        "pokemon-species",
+        "stat",
+        "type",
+        "version",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokemon/{id}/encounters",
+      "group": "Pokémon",
+      "title": "Pokemon Location Areas",
+      "path": "/pokemon/{id or name}/encounters",
+      "named": true,
+      "list_model": null,
+      "primary_model": "LocationAreaEncounter",
+      "returns_array": true,
+      "nested_models": [],
+      "references_endpoints": [
+        "encounter-condition-value",
+        "encounter-method",
+        "location-area",
+        "version"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokemon-color",
+      "group": "Pokémon",
+      "title": "Pokemon Colors",
+      "path": "/pokemon-color/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "PokemonColor",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokemon-form",
+      "group": "Pokémon",
+      "title": "Pokemon Forms",
+      "path": "/pokemon-form/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "PokemonForm",
+      "returns_array": false,
+      "nested_models": [
+        "PokemonFormCondition",
+        "PokemonFormSprites",
+        "PokemonFormFlavorTextEntry"
+      ],
+      "references_endpoints": [
+        "language",
+        "pokemon",
+        "type",
+        "version",
+        "version-group"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokemon-habitat",
+      "group": "Pokémon",
+      "title": "Pokemon Habitats",
+      "path": "/pokemon-habitat/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "PokemonHabitat",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [
+        "language",
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokemon-shape",
+      "group": "Pokémon",
+      "title": "Pokemon Shapes",
+      "path": "/pokemon-shape/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "PokemonShape",
+      "returns_array": false,
+      "nested_models": [
+        "AwesomeName"
+      ],
+      "references_endpoints": [
+        "language",
+        "pokemon-species"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "pokemon-species",
+      "group": "Pokémon",
+      "title": "Pokemon Species",
+      "path": "/pokemon-species/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "PokemonSpecies",
+      "returns_array": false,
+      "nested_models": [
+        "Genus",
+        "PokemonSpeciesDexEntry",
+        "PalParkEncounterArea",
+        "PokemonSpeciesVariety"
+      ],
+      "references_endpoints": [
+        "egg-group",
+        "evolution-chain",
+        "generation",
+        "growth-rate",
+        "language",
+        "pal-park-area",
+        "pokedex",
+        "pokemon",
+        "pokemon-color",
+        "pokemon-habitat",
+        "pokemon-shape",
+        "version"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "stat",
+      "group": "Pokémon",
+      "title": "Stats",
+      "path": "/stat/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Stat",
+      "returns_array": false,
+      "nested_models": [
+        "MoveStatAffectSets",
+        "MoveStatAffect",
+        "NatureStatAffectSets"
+      ],
+      "references_endpoints": [
+        "characteristic",
+        "item",
+        "language",
+        "move",
+        "move-damage-class",
+        "nature"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "type",
+      "group": "Pokémon",
+      "title": "Types",
+      "path": "/type/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Type",
+      "returns_array": false,
+      "nested_models": [
+        "TypePokemon",
+        "TypeRelations",
+        "TypeRelationsPast"
+      ],
+      "references_endpoints": [
+        "generation",
+        "language",
+        "move",
+        "move-damage-class",
+        "pokemon"
+      ],
+      "references_models_unresolved": []
+    },
+    {
+      "endpoint": "language",
+      "group": "Utility",
+      "title": "Languages",
+      "path": "/language/{id or name}/",
+      "named": true,
+      "list_model": "NamedAPIResourceList",
+      "primary_model": "Language",
+      "returns_array": false,
+      "nested_models": [],
+      "references_endpoints": [],
+      "references_models_unresolved": []
+    }
+  ]
+}

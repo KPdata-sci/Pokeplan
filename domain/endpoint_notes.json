@@ -1,0 +1,21 @@
+{
+  "generation": "Nine generations, 1996 to today. A game's generation is when it was released, not where it is set: HeartGold/SoulSilver are a gen IV remake set in the gen II region.",
+  "version-group": "One game release, usually a pair of versions. 32 groups. <code>order</code> (1 to 32) is a global release timeline. The API doesn't say which groups are remakes, DLC or spin-offs, and a group can cover two regions (HeartGold/SoulSilver: Johto and Kanto).",
+  "version": "53 versions. Encounters and wild held items differ by version; learnsets and machines only by version group.",
+  "pokedex": "35 dexes: national plus regional, often several per game. A species has a different number in each (Pikachu #25 national, #74 Paldea).",
+  "type": "18 battle types (Dark and Steel from gen II, Fairy from gen VI) plus Stellar (Tera only), unknown (???) and shadow, which no Pokémon has as its own type. <code>move_damage_class</code> is the class every move of this type had before the gen IV physical/special split. <code>past_damage_relations</code> holds the gen I and gen V charts.",
+  "stat": "Includes <code>special</code>, which only existed in gen I and only appears in <code>pokemon.past_stats</code>.",
+  "ability": "Abilities start in gen III, hidden abilities in gen V.",
+  "move": "Values changed between games: 198 recorded changes, 83 in X/Y. <code>past_values</code> lists only the changed fields, and they are the values from <b>before</b> the listed version group (Bite: <code>normal, gold-silver</code>; Bite was Normal in Red/Blue). Before gen IV a move's physical/special class came from its type.",
+  "machine": "Which move a TM/HM/TR teaches depends on the game: TM26 is Earthquake in 20 version groups, then four other moves. 2,142 TMs, 130 HMs, 100 TRs.",
+  "pokemon-species": "1,025 species: 151, 100, 135, 107, 156, 72, 88, 96, 120 per generation. 71 legendary, 23 mythical, 19 baby.",
+  "pokemon": "1,351 battle varieties: 1,025 defaults plus 97 megas, 59 regional forms, 34 Gigantamax, 12 totems and other alternates. <code>past_types</code> replaces the whole typing; <code>past_stats</code> and <code>past_abilities</code> list only what changed; all three are valid up to and including their generation. One move can appear at several levels in one game (Smeargle's Sketch). Level 0 on a level-up move means \"learnt on evolving\" (gen VII+).",
+  "pokemon-form": "1,579 forms. Cosmetic forms (Unown letters, Vivillon patterns) exist only here; battle-relevant variants are separate <code>pokemon</code>. <code>version_group</code> is when the form first appeared: Alolan Raichu arrives in Sun/Moon.",
+  "evolution-chain": "540 chains, 676 rules. Chains are per species; <code>region</code>, <code>required_pokemon_form</code> and <code>evolved_pokemon_form</code> tell regional evolutions apart (Pikachu to Alolan Raichu only in Alola). One step can have several rules, one per game that changed it.",
+  "evolution-trigger": "18 triggers, from level-up and trade to spin, three-critical-hits and gimmighoul-coins.",
+  "location-area": "117,127 encounters. <code>chance</code> is a slot percentage in classic games, a relative weight for Let's Go and Sword/Shield overworld spawns, and always 100 for gifts and statics. No encounter data after Sword/Shield.",
+  "encounter-method": "66 methods: walking, surfing, three rods, headbutt, hordes, SOS, overworld wanderers, Max Raids, gifts, static encounters.",
+  "encounter-condition": "30 condition types: time, season, weather, swarm, Poké Radar, GBA cartridge in slot 2, radio, story progress and more.",
+  "item": "2,223 items. Held items started in gen II. TMs were single-use until gen V; HMs were removed in gen VII; TRs existed only in gen VIII.",
+  "region": "Regions are modelled on real places: Kanto/Johto/Hoenn/Sinnoh on Japan, Unova on New York, Kalos on France, Alola on Hawaii, Galar on the UK, Paldea on Iberia. Hisui is ancient Sinnoh; Orre is the Colosseum/XD region."
+}
