@@ -11,8 +11,9 @@ Run in order against an empty database:
 | `05_load.sql` | load | `CALL mart.load(batch_id)`: upserts dims on natural key (SCD1; `dim_move` is SCD2), full-refreshes facts, clamps history to the domain timeline, densifies the type chart, sets data-coverage flags |
 | `06_tests.sql` | tests | Grain, referential, structural and domain checks (zero rows = pass), then two warning queries that document source-data quirks |
 | `07_example_queries.sql` | usage | Eleven questions the star answers, including point-in-time and SCD2 joins |
+| `08_serve.sql` | serve | `serve.*` views the dashboard reads (one row per Pokémon card, the type chart, generations, the last pipeline run) |
 
-Pipeline per run: insert a row into `etl.load_batch`, land API responses in `raw.api_response`, then `CALL mart.load(<batch_id>)`, then run `06_tests.sql`.
+Pipeline per run: insert a row into `etl.load_batch`, land API responses in `raw.api_response`, then `CALL mart.load(<batch_id>)`, then run `06_tests.sql`. `../pipeline/run_pipeline.sh` does all of this in one command.
 
 ## Loading without the live API
 
@@ -51,7 +52,7 @@ All 27 checks in sections 1 to 4 of `06_tests.sql` return zero rows. The warning
 
 ## What changed from v1, and why
 
-v1 (kept in `v1/` for comparison) modelled the API correctly but treated every game as the same game. Domain research (`../domain/pokemon_domain_notes.md`) and a load of the real data showed where that breaks:
+v1 (removed from the tree; see the first commit in git history) modelled the API correctly but treated every game as the same game. Domain research (`../domain/pokemon_domain_notes.md`) and a load of the real data showed where that breaks:
 
 1. **Learnset grain was wrong.** Smeargle learns Sketch at levels 1, 11, ... 91 in the same game, so `level_learned_at` joins the key of `fact_pokemon_move`. v1's primary key rejected the real data.
 2. **Moves change between games.** `dim_move` is now SCD type 2 (one row per move per era) and facts point at the era live in their game. Bite is Normal and physical in Red/Blue, Dark and special in Gold/Silver to Emerald, Dark and physical from Diamond/Pearl. The API's own docs describe `past_values` the wrong way round; Bite proves which way it goes.

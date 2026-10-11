@@ -1,0 +1,49 @@
+# Runs the whole pipeline against a fresh Postgres on every pull request,
+# then runs it again to prove a rerun is safe (idempotent).
+name: pipeline
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pokeplan
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: pokeplan
+    steps:
+      - uses: actions/checkout@v4
+
+      # Keep the api-data clone between the two runs (the runner context is
+      # not available in job-level env, so set WORK here).
+      - name: Set work folder
+        run: mkdir -p "$RUNNER_TEMP/pokeplan" && echo "WORK=$RUNNER_TEMP/pokeplan" >> "$GITHUB_ENV"
+
+      - name: First run (extract, land, transform, test, serve)
+        run: bash pipeline/run_pipeline.sh
+
+      - name: Second run must land nothing new
+        run: |
+          bash pipeline/run_pipeline.sh
+          read -r status fetched changed < <(psql -XAt -F ' ' -c \
+            "SELECT status, rows_fetched, rows_changed FROM etl.load_batch ORDER BY batch_id DESC LIMIT 1")
+          echo "last batch: status=$status fetched=$fetched changed=$changed"
+          test "$status" = succeeded && test "$fetched" -gt 0 && test "$changed" -eq 0
+
+      - name: Dashboard builds from the fresh data
+        run: python3 dashboard/build_dashboard.py "$RUNNER_TEMP/pokedex_dashboard.html"

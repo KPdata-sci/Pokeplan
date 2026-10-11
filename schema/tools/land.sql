@@ -13,7 +13,7 @@
 -- load leaves no half-landed rows and no batch behind.
 --
 -- The batch is left as 'running'. Whoever runs the transform and the tests
--- marks it 'succeeded' or 'failed' (dashboard/run_pipeline.sh does this).
+-- marks it 'succeeded' or 'failed' (pipeline/run_pipeline.sh does this).
 
 \set ON_ERROR_STOP on
 \if :{?csv}
