@@ -214,7 +214,7 @@ function filtered(){ return P.filter(function(p){ return (state.gen===0 || p.gen
   document.getElementById('run-meta').textContent = 'Batch ' + r.batch_id + ' · ' + r.notes + ' · finished ' + when.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC';
   var steps = [
     ['Extract', '21', 'endpoints from the api-data repo'],
-    ['Land', fmt(r.raw_responses), 'raw JSON responses'],
+    ['Land', fmt(r.raw_responses), r.raw_changed == null ? 'raw JSON responses' : 'raw JSON responses, ' + fmt(r.raw_changed) + ' new or changed'],
     ['Transform', fmt(facts), 'rows in 10 fact tables'],
     ['Test', '27 / 27', 'checks passed'],
     ['Serve', '4', 'views feed this page']

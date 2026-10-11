@@ -62,8 +62,8 @@ WHERE generation_number > 0;
 -- What the last pipeline run did.
 CREATE OR REPLACE VIEW serve.pipeline_run AS
 SELECT b.batch_id, b.status, b.started_at, b.finished_at, b.notes,
-       (SELECT count(*) FROM raw.api_response r WHERE r.batch_id = b.batch_id) AS raw_responses,
-       (SELECT count(DISTINCT endpoint) FROM raw.api_response r WHERE r.batch_id = b.batch_id) AS endpoints
+       b.rows_fetched AS raw_responses, b.rows_changed AS raw_changed,
+       cardinality(b.endpoints) AS endpoints
 FROM etl.load_batch b
 ORDER BY b.batch_id DESC
 LIMIT 1;
