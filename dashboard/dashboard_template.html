@@ -9,7 +9,7 @@
 :root{
   --bg:#f4f5f8; --surface:#ffffff; --sunk:#eaedf2; --fg:#0f131a; --muted:#485261; --line:#d3d8e1; --grid:#e4e8ee;
   --accent:#c21f32; --accent-ink:#ffffff; --accent-soft:#fce6e8;
-  --s1:#2a78d6; --track:#e3e7ed;
+  --s1:#2a78d6; --track:#e3e7ed; --disc:#eef1f5;
   --good-text:#00630a; --good-bg:#e2f4e2;
   --d-0:#104281; --d-lo:#86b6ef; --d-1:#eceae6; --d-2:#e34948; --d-0-ink:#ffffff; --d-ink:#0b0b0b;
   --shadow:0 1px 2px rgba(15,19,26,.06),0 4px 14px rgba(15,19,26,.06);
@@ -20,14 +20,14 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1116; --surface:#171b22; --sunk:#11151a; --fg:#eef1f5; --muted:#b5bec9; --line:#323a46; --grid:#252c36;
   --accent:#ff7484; --accent-ink:#1b0709; --accent-soft:#3b1a20;
-  --s1:#3987e5; --track:#2c3440;
+  --s1:#3987e5; --track:#2c3440; --disc:#222833;
   --good-text:#7fe08a; --good-bg:#15301a;
   --d-0:#104281; --d-lo:#86b6ef; --d-1:#383835; --d-2:#e66767; --d-0-ink:#ffffff; --d-ink:#0b0b0b;
   --shadow:none; color-scheme:dark }}
 :root[data-theme="dark"]{
   --bg:#0e1116; --surface:#171b22; --sunk:#11151a; --fg:#eef1f5; --muted:#b5bec9; --line:#323a46; --grid:#252c36;
   --accent:#ff7484; --accent-ink:#1b0709; --accent-soft:#3b1a20;
-  --s1:#3987e5; --track:#2c3440;
+  --s1:#3987e5; --track:#2c3440; --disc:#222833;
   --good-text:#7fe08a; --good-bg:#15301a;
   --d-0:#104281; --d-lo:#86b6ef; --d-1:#383835; --d-2:#e66767; --d-0-ink:#ffffff; --d-ink:#0b0b0b;
   --shadow:none; color-scheme:dark }
@@ -94,6 +94,10 @@ select{width:100%;font-size:16px;text-transform:none;letter-spacing:0;font-weigh
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .dex{font:600 14px var(--mono);color:var(--muted)}
 .pk .nm{font:700 21px/1.15 var(--display);overflow-wrap:anywhere}
+.pk .id{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.pk .id>span:first-child{display:flex;flex-direction:column;gap:8px;min-width:0}
+/* Artwork: every Pokémon sits on the same soft disc, cut from one sprite sheet */
+.art{display:block;flex:none;border-radius:50%;background-color:var(--disc);background-repeat:no-repeat}
 .types{display:flex;flex-wrap:wrap;gap:6px}
 .ty{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;background:var(--sunk);border-radius:999px;padding:2px 10px 2px 7px;white-space:nowrap}
 .ty i{width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 1px var(--line);flex:none}
@@ -178,6 +182,8 @@ dialog::backdrop{background:rgba(8,10,14,.6)}
 .dlg{padding:20px;display:flex;flex-direction:column;gap:16px}
 .dhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .dhead h2{font-size:30px}
+.dhero{display:flex;gap:16px;align-items:center;min-width:0}
+@media (max-width:420px){.dhero{gap:12px}}
 .x-btn{border:0;background:var(--sunk);border-radius:12px;width:44px;height:44px;font-size:24px;cursor:pointer;flex:none}
 .facts{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:15px;color:var(--muted)}
 .big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -329,6 +335,12 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function dexNo(n){return '#'+String(n).padStart(4,'0');}
 function typePill(t, extra){return '<span class="ty"><i style="background:'+TYPE_COLOR[t]+'"></i>'+esc(t)+(extra||'')+'</span>';}
+var SP = D.sprites;
+function art(dex, size){
+  if (!SP || dex > SP.count) return '';
+  var k = size/SP.tile, col = (dex-1)%SP.cols, row = Math.floor((dex-1)/SP.cols);
+  return '<span class="art" aria-hidden="true" style="width:'+size+'px;height:'+size+'px;background-image:url(sprites.webp);background-size:'+(SP.cols*size)+'px auto;background-position:-'+(col*size)+'px -'+(row*size)+'px"></span>';
+}
 function typesOf(p){return p.t2 ? [p.t1,p.t2] : [p.t1];}
 function tile(k,v,d){return '<div class="tile"><span class="k">'+k+'</span><span class="v">'+v+'</span><span class="d">'+d+'</span></div>';}
 var MAX_BST = Math.max.apply(null, P.map(function(p){return p.bst;}));
@@ -409,8 +421,8 @@ function card(p){
   var one = state.sort.length===1, v = one ? p.stats[+state.sort] : p.bst, w = one ? v/255 : v/MAX_BST;
   return '<button class="pk" data-dex="'+p.dex+'" aria-label="'+esc(p.name)+', open details">'+
     '<span class="row"><span class="dex">'+dexNo(p.dex)+'</span>'+(p.rarity!=='regular'?'<span class="rare">'+p.rarity+'</span>':'<span class="dex">Gen '+GENS[p.gen-1].roman+'</span>')+'</span>'+
-    '<span class="nm">'+esc(p.name)+'</span>'+
-    '<span class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</span>'+
+    '<span class="id"><span><span class="nm">'+esc(p.name)+'</span>'+
+    '<span class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</span></span>'+art(p.dex,84)+'</span>'+
     '<span class="tot"><span class="row"><span>'+(one?STAT_NAMES[+state.sort]:'Total stats')+'</span><b>'+v+'</b></span>'+
     '<span class="track"><span class="fill" style="width:'+(w*100).toFixed(1)+'%"></span></span></span>'+
   '</button>';
@@ -448,7 +460,7 @@ function openDetail(dex){
     return '<div class="mrow"><span class="lab">'+label+'</span><div class="types">'+(items.join('')||'<span class="none">None</span>')+'</div></div>';
   }
   $('dlgbody').innerHTML =
-    '<div class="dhead"><div style="display:flex;flex-direction:column;gap:6px;min-width:0"><span class="dex">'+dexNo(p.dex)+(p.rarity!=='regular'?' <span class="rare">'+p.rarity+'</span>':'')+'</span><h2 id="d-name">'+esc(p.name)+'</h2><div class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</div></div><button class="x-btn" id="dclose" aria-label="Close">×</button></div>'+
+    '<div class="dhead"><div class="dhero">'+art(p.dex, innerWidth<420?100:128)+'<div style="display:flex;flex-direction:column;gap:6px;min-width:0"><span class="dex">'+dexNo(p.dex)+(p.rarity!=='regular'?' <span class="rare">'+p.rarity+'</span>':'')+'</span><h2 id="d-name">'+esc(p.name)+'</h2><div class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</div></div></div><button class="x-btn" id="dclose" aria-label="Close">×</button></div>'+
     '<div class="facts"><span>Gen '+g.roman+'</span><span>'+cap(g.region)+' region</span><span>First seen '+g.year+'</span></div>'+
     '<div class="big"><b>'+p.bst+'</b><span class="muted">total stats, higher than '+Math.round(beat)+'% of all Pokémon</span></div>'+
     '<div class="stats">'+p.stats.map(function(v,i){return '<div class="st"><span class="lbl">'+STAT_NAMES[i]+'</span><span class="val">'+v+'</span><span class="track"><span class="fill" style="width:'+(v/255*100).toFixed(1)+'%"></span><span class="avg" style="left:'+(AVG_ALL[i]/255*100).toFixed(1)+'%" title="Average '+Math.round(AVG_ALL[i])+'"></span></span></div>';}).join('')+

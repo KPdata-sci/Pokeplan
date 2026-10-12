@@ -10,6 +10,8 @@ data = {
     "generations": d["generations"],
     "run": d["run"],
     "mart_rows": d["mart_rows"],
+    # Sprite sheet layout written by build_sprites.py; the page shows no pictures without it.
+    "sprites": json.loads((here / "sprites.json").read_text()) if (here / "sprites.json").exists() else None,
 }
 blob = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
 out = here / (sys.argv[1] if len(sys.argv) > 1 else "pokedex_dashboard.html")

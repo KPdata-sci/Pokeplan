@@ -7,6 +7,12 @@ PGHOST=... PGDATABASE=pokeplan bash ../pipeline/run_pipeline.sh   # extract, lan
 python3 build_dashboard.py                                        # dashboard_template.html + data -> pokedex_dashboard.html
 ```
 
+Pictures: `build_sprites.py <official-artwork folder>` packs the official artwork from
+[PokeAPI/sprites](https://github.com/PokeAPI/sprites) (`sprites/pokemon/other/official-artwork`) into one sheet,
+`sprites.webp`, plus its layout in `sprites.json`. Each picture is trimmed, scaled to the same square and centred,
+so every Pokémon looks alike on the page. Publish `sprites.webp` next to `pokedex_dashboard.html`. Only needed again
+when new species are added.
+
 - `../pipeline/run_pipeline.sh`: clones the 21 endpoints from PokeAPI/api-data, lands them in `raw.api_response`,
   runs `CALL mart.load`, runs `06_tests.sql` (stops and marks the batch failed if any check fails),
   marks the batch succeeded, creates the serving views and exports JSON.
