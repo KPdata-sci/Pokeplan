@@ -33,7 +33,7 @@ BEGIN
     TRUNCATE mart.fact_pokemon_move, mart.fact_pokemon_stat, mart.fact_encounter,
              mart.fact_pokemon_held_item, mart.fact_evolution, mart.fact_pokemon_type,
              mart.fact_pokemon_ability, mart.fact_type_effectiveness,
-             mart.fact_pokedex_entry, mart.fact_machine,
+             mart.fact_pokedex_entry, mart.fact_machine, mart.fact_species_flavor_text,
              mart.bridge_version_group_region, mart.bridge_version_group_pokedex;
 
     -- ------------------------------------------- unknown members (key 0)
@@ -208,7 +208,7 @@ BEGIN
     INSERT INTO mart.dim_move AS d (move_id, valid_from_order, valid_to_order, is_current,
             era_generation, move_code, move_name, type_code, damage_class, effective_damage_class,
             power, accuracy, pp, priority, effect_chance, target, ailment, move_category,
-            introduced_generation, _batch_id, _row_hash)
+            introduced_generation, short_effect, description, _batch_id, _row_hash)
     SELECT x.*, p_batch, md5(x::text)
     FROM (
         SELECT e.move_id, e.valid_from_order, e.valid_to_order, e.is_current, e.era_generation_id,
@@ -218,7 +218,7 @@ BEGIN
                          THEN COALESCE(t.damage_class, m.damage_class)
                     ELSE m.damage_class END,
                e.power, e.accuracy, e.pp, m.priority, e.effect_chance, m.target, m.ailment,
-               m.move_category, m.generation_id
+               m.move_category, m.generation_id, m.short_effect, m.description
         FROM stg.move_era e
         JOIN stg.move m USING (move_id)
         LEFT JOIN stg.type t ON t.type_id = e.type_id
@@ -234,6 +234,7 @@ BEGIN
            target = EXCLUDED.target, ailment = EXCLUDED.ailment,
            move_category = EXCLUDED.move_category,
            introduced_generation = EXCLUDED.introduced_generation,
+           short_effect = EXCLUDED.short_effect, description = EXCLUDED.description,
            _batch_id = EXCLUDED._batch_id, _loaded_at = now(), _row_hash = EXCLUDED._row_hash
      WHERE d._row_hash IS DISTINCT FROM EXCLUDED._row_hash;
 
@@ -243,11 +244,11 @@ BEGIN
                        WHERE e.move_id = d.move_id AND e.valid_from_order = d.valid_from_order);
 
     INSERT INTO mart.dim_item AS d (item_id, item_code, item_name, category, cost, fling_power,
-            fling_effect, is_holdable, machine_kind, _batch_id, _row_hash)
+            fling_effect, is_holdable, machine_kind, short_effect, description, _batch_id, _row_hash)
     SELECT x.*, p_batch, md5(x::text)
     FROM (
         SELECT item_id, item_code, item_name, category, cost, fling_power, fling_effect, is_holdable,
-               substring(item_code FROM '^(tm|hm|tr)\d+$')
+               substring(item_code FROM '^(tm|hm|tr)\d+$'), short_effect, description
         FROM stg.item
     ) x
     ON CONFLICT (item_id) DO UPDATE
@@ -255,6 +256,7 @@ BEGIN
            category = EXCLUDED.category, cost = EXCLUDED.cost,
            fling_power = EXCLUDED.fling_power, fling_effect = EXCLUDED.fling_effect,
            is_holdable = EXCLUDED.is_holdable, machine_kind = EXCLUDED.machine_kind,
+           short_effect = EXCLUDED.short_effect, description = EXCLUDED.description,
            _batch_id = EXCLUDED._batch_id, _loaded_at = now(), _row_hash = EXCLUDED._row_hash
      WHERE d._row_hash IS DISTINCT FROM EXCLUDED._row_hash;
 
@@ -573,6 +575,13 @@ BEGIN
     FROM stg.pokedex_entry s
     LEFT JOIN mart.dim_species sp ON sp.species_id = s.species_id
     LEFT JOIN mart.dim_pokedex d  ON d.pokedex_id = s.pokedex_id;
+
+    INSERT INTO mart.fact_species_flavor_text (species_key, version_key, flavor_text, _batch_id)
+    SELECT COALESCE(sp.species_key, 0), COALESCE(v.version_key, 0), s.flavor_text, p_batch
+    FROM stg.species_flavor_text s
+    LEFT JOIN mart.dim_species sp ON sp.species_id = s.species_id
+    LEFT JOIN mart.dim_version v  ON v.version_id = s.version_id
+    WHERE s.flavor_text IS NOT NULL;
 
     INSERT INTO mart.fact_machine (item_key, version_group_key, move_key, machine_kind,
             machine_number, _batch_id)

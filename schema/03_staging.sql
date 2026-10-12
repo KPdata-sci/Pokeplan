@@ -32,6 +32,29 @@ AS $$
     LIMIT 1
 $$;
 
+-- Game text comes with the cartridge's line breaks and page breaks in it
+-- (and old games break words with a soft hyphen). Flatten it to one line.
+CREATE OR REPLACE FUNCTION stg.clean_text(t text)
+RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE
+AS $$
+    SELECT NULLIF(btrim(regexp_replace(replace(t, E'\u00ad\n', ''), '[\s]+', ' ', 'g')), '')
+$$;
+
+-- The English text from a flavor_text_entries array, newest game first.
+-- Entries carry either version_group (moves, items) or version (species);
+-- both ids rise with release order closely enough to pick the newest.
+CREATE OR REPLACE FUNCTION stg.en_flavor(entries jsonb, text_key text)
+RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE
+AS $$
+    SELECT stg.clean_text(e->>text_key)
+    FROM jsonb_array_elements(COALESCE(entries, '[]'::jsonb)) e
+    WHERE e->'language'->>'name' = 'en'
+    ORDER BY raw.url_id(COALESCE(e->'version_group', e->'version')->>'url') DESC NULLS LAST
+    LIMIT 1
+$$;
+
 -- ---------------------------------------------------------------- dims
 
 -- Grain: one row per generation.
@@ -135,7 +158,13 @@ SELECT resource_id                                AS move_id,
        payload->'target'->>'name'                 AS target,
        payload->'meta'->'ailment'->>'name'        AS ailment,
        payload->'meta'->'category'->>'name'       AS move_category,
-       raw.url_id(payload->'generation'->>'url')  AS generation_id
+       raw.url_id(payload->'generation'->>'url')  AS generation_id,
+       -- English texts. The short effect has a $effect_chance placeholder.
+       stg.clean_text(replace(
+           (SELECT e->>'short_effect' FROM jsonb_array_elements(payload->'effect_entries') e
+             WHERE e->'language'->>'name' = 'en' LIMIT 1),
+           '$effect_chance', COALESCE(payload->>'effect_chance', ''))) AS short_effect,
+       stg.en_flavor(payload->'flavor_text_entries', 'flavor_text') AS description
 FROM raw.current_response WHERE endpoint = 'move';
 
 -- Grain: move x version group in which some of its values CHANGED.
@@ -232,7 +261,10 @@ SELECT resource_id                         AS item_id,
        (payload->>'fling_power')::int      AS fling_power,
        payload->'fling_effect'->>'name'    AS fling_effect,
        EXISTS (SELECT 1 FROM jsonb_array_elements(payload->'attributes') a
-                WHERE a->>'name' = 'holdable')  AS is_holdable
+                WHERE a->>'name' = 'holdable')  AS is_holdable,
+       stg.clean_text((SELECT e->>'short_effect' FROM jsonb_array_elements(payload->'effect_entries') e
+                        WHERE e->'language'->>'name' = 'en' LIMIT 1)) AS short_effect,
+       stg.en_flavor(payload->'flavor_text_entries', 'text') AS description
 FROM raw.current_response WHERE endpoint = 'item';
 
 -- Grain: one row per location area (an area belongs to one location,
@@ -275,6 +307,19 @@ SELECT resource_id                                          AS species_id,
        payload->'shape'->>'name'                            AS shape,
        payload->'habitat'->>'name'                          AS habitat
 FROM raw.current_response WHERE endpoint = 'pokemon-species';
+
+-- Grain: species x version. The Pokédex entry text each game shows for a
+-- species, in English. A few games list the same text twice; keep one.
+CREATE OR REPLACE VIEW stg.species_flavor_text AS
+SELECT DISTINCT ON (s.resource_id, raw.url_id(f->'version'->>'url'))
+       s.resource_id                         AS species_id,
+       raw.url_id(f->'version'->>'url')      AS version_id,
+       stg.clean_text(f->>'flavor_text')     AS flavor_text
+FROM raw.current_response s
+CROSS JOIN LATERAL jsonb_array_elements(s.payload->'flavor_text_entries') f
+WHERE s.endpoint = 'pokemon-species'
+  AND f->'language'->>'name' = 'en'
+ORDER BY s.resource_id, raw.url_id(f->'version'->>'url');
 
 -- Grain: species x pokedex. The same species has a different number in
 -- every regional dex (Pikachu: #25 national, #74 Paldea).

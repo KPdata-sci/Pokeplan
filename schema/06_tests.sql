@@ -26,6 +26,9 @@ FROM stg.evolution GROUP BY 2,3,4 HAVING count(*) > 1;
 SELECT 'grain: stg.move_era' AS test, move_id, valid_from_order
 FROM stg.move_era GROUP BY 2,3 HAVING count(*) > 1;
 
+SELECT 'grain: stg.species_flavor_text' AS test, species_id, version_id
+FROM stg.species_flavor_text GROUP BY 2,3 HAVING count(*) > 1;
+
 -- 2. REFERENTIAL tests: facts that fell back to the Unknown member (key 0)
 --    mean a dimension was not crawled. Expect zero after a full crawl.
 SELECT 'unknown key: fact_pokemon_move' AS test, count(*) FROM mart.fact_pokemon_move
@@ -33,6 +36,9 @@ WHERE 0 IN (pokemon_key, move_key, version_group_key, learn_method_key) HAVING c
 
 SELECT 'unknown key: fact_encounter' AS test, count(*) FROM mart.fact_encounter
 WHERE 0 IN (location_area_key, pokemon_key, version_key, encounter_method_key) HAVING count(*) > 0;
+
+SELECT 'unknown key: fact_species_flavor_text' AS test, count(*) FROM mart.fact_species_flavor_text
+WHERE 0 IN (species_key, version_key) HAVING count(*) > 0;
 
 SELECT 'unknown key: fact_pokemon_stat' AS test, count(*) FROM mart.fact_pokemon_stat
 WHERE 0 IN (pokemon_key, stat_key) HAVING count(*) > 0;

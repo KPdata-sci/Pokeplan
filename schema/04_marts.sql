@@ -186,9 +186,13 @@ CREATE TABLE IF NOT EXISTS mart.dim_move (
     ailment             text,
     move_category       text,
     introduced_generation smallint,
+    short_effect        text,                       -- English, current wording (same on every era)
+    description         text,                       -- English, the newest game's text
     _batch_id bigint, _loaded_at timestamptz DEFAULT now(), _row_hash text,
     UNIQUE (move_id, valid_from_order)
 );
+ALTER TABLE mart.dim_move ADD COLUMN IF NOT EXISTS short_effect text;
+ALTER TABLE mart.dim_move ADD COLUMN IF NOT EXISTS description text;
 
 -- Grain: one row per item. ~2,200 rows.
 CREATE TABLE IF NOT EXISTS mart.dim_item (
@@ -202,8 +206,12 @@ CREATE TABLE IF NOT EXISTS mart.dim_item (
     fling_effect        text,
     is_holdable         boolean,
     machine_kind        text,                       -- 'tm' / 'hm' / 'tr', NULL for other items
+    short_effect        text,                       -- English, what it does
+    description         text,                       -- English, the newest game's bag text
     _batch_id bigint, _loaded_at timestamptz DEFAULT now(), _row_hash text
 );
+ALTER TABLE mart.dim_item ADD COLUMN IF NOT EXISTS short_effect text;
+ALTER TABLE mart.dim_item ADD COLUMN IF NOT EXISTS description text;
 
 -- Grain: one row per location area; location and region flattened in.
 -- ~1,540 rows.
@@ -505,6 +513,17 @@ CREATE TABLE IF NOT EXISTS mart.fact_pokedex_entry (
     entry_number        smallint NOT NULL,          -- (N) position in that dex
     _batch_id bigint, _loaded_at timestamptz DEFAULT now(),
     PRIMARY KEY (species_key, pokedex_key)
+);
+
+-- Grain: one row per species x game version: the Pokédex entry text that
+-- version shows. ~20,000 rows. Lets you read how a species was described
+-- in Red compared with Scarlet.
+CREATE TABLE IF NOT EXISTS mart.fact_species_flavor_text (
+    species_key         integer  NOT NULL REFERENCES mart.dim_species,
+    version_key         smallint NOT NULL REFERENCES mart.dim_version,
+    flavor_text         text     NOT NULL,
+    _batch_id bigint, _loaded_at timestamptz DEFAULT now(),
+    PRIMARY KEY (species_key, version_key)
 );
 
 -- FACTLESS FACT. Grain: one row per machine item x version group.

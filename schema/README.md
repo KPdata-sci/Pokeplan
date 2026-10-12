@@ -7,7 +7,7 @@ Run in order against an empty database:
 | `01_raw.sql` | raw / bronze | `raw.api_response` landing table (JSONB, append-only, hash change detection), `etl.load_batch` audit table, `raw.url_id()` helper |
 | `02_reference.sql` | reference / seeds | Domain knowledge the API does not carry: generation years, when mechanics arrived (abilities gen III, physical/special split gen IV...), which games are remakes/DLC/spin-offs, form and encounter-method rules |
 | `03_staging.sql` | staging / silver | One view per grain that flattens the nested JSON, and turns the API's four `past_*` history shapes into eras (`stg.move_era`, `stg.pokemon_stat`, ...) |
-| `04_marts.sql` | mart / gold | 16 dimensions, 2 bridges, 10 facts, plus `mart.pokemon_profile` and the as-of helper `mart.move_in_version_group` |
+| `04_marts.sql` | mart / gold | 16 dimensions, 2 bridges, 11 facts, plus `mart.pokemon_profile` and the as-of helper `mart.move_in_version_group` |
 | `05_load.sql` | load | `CALL mart.load(batch_id)`: upserts dims on natural key (SCD1; `dim_move` is SCD2), full-refreshes facts, clamps history to the domain timeline, densifies the type chart, sets data-coverage flags |
 | `06_tests.sql` | tests | Grain, referential, structural and domain checks (zero rows = pass), then two warning queries that document source-data quirks |
 | `07_example_queries.sql` | usage | Eleven questions the star answers, including point-in-time and SCD2 joins |
@@ -37,6 +37,7 @@ Endpoints staging reads: generation, version-group, version, region, pokedex, ty
 |---|---|
 | fact_pokemon_move | 638,321 |
 | fact_encounter | 117,127 |
+| fact_species_flavor_text | 14,496 |
 | fact_pokedex_entry | 8,010 |
 | fact_pokemon_stat | 8,341 |
 | fact_pokemon_held_item | 5,448 |
