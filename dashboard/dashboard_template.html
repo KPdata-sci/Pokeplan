@@ -354,6 +354,10 @@ textarea{font:500 14px/1.5 var(--mono);min-height:220px;resize:vertical}
 .evs .up{color:var(--accent)} .evs .down{color:var(--s1)}
 .edfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .btn.small{min-height:40px;padding:8px 14px;font-size:15px}
+.tsearch{display:flex;flex-direction:column;gap:8px}
+.tres .li .r{flex-direction:row;align-items:center}
+.tres .add{font-weight:700;color:var(--accent);white-space:nowrap}
+.tres .li[disabled]{cursor:default;opacity:.55}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;z-index:50;max-width:calc(100vw - 32px)}
 </style>
 
@@ -401,6 +405,12 @@ textarea{font:500 14px/1.5 var(--mono);min-height:220px;resize:vertical}
     <div class="tbar">
       <label class="lbl-sel">Game<select id="t-game"></select></label>
       <div class="acts"><button class="obtn" id="t-lv50">All to Lv 50</button><button class="obtn" id="t-lv100">All to Lv 100</button><button class="obtn danger" id="t-clear">Clear team</button></div>
+    </div>
+    <div class="tsearch">
+      <div class="sbox"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>
+        <input id="t-find" type="search" placeholder="Search for a Pokémon to add" aria-label="Search for a Pokémon to add to your team" aria-controls="t-res" autocomplete="off" spellcheck="false">
+        <button class="clear" id="t-findclear" aria-label="Clear search" hidden>×</button></div>
+      <div class="list tres" id="t-res" hidden></div>
     </div>
     <p class="sub" id="t-hint"></p>
     <div class="tslots" id="t-slots" aria-label="Your team"></div>
@@ -1291,7 +1301,7 @@ function toast(msg){
 function renderTeam(){
   var gsel = $('t-game');
   gsel.innerHTML = TEAM_GAMES.map(function(c){return '<option value="'+c+'"'+(c===team.game?' selected':'')+'>'+esc(gameName(c))+' ('+GAME[c].year+')</option>';}).join('');
-  $('t-hint').textContent = (matchMedia('(pointer:coarse)').matches ? 'Press and hold a Pokémon, then drag it onto a slot. Or tap it to add it.' : 'Drag a Pokémon onto a slot, or click it to add it. Drag slots to swap them.')+' Tap a team member to set its level, moves and more.';
+  $('t-hint').textContent = (matchMedia('(pointer:coarse)').matches ? 'Search above and tap a Pokémon to add it, or press and hold one and drag it onto a slot.' : 'Search above, or drag a Pokémon onto a slot. Click one to add it. Drag slots to swap them.')+' Tap a team member to set its level, moves and more.';
   $('t-slots').innerHTML = '<p class="loading">Loading your team…</p>';
   teamData().then(function(r){
     var gf = r[0], ls = learnMap(gf);
@@ -1545,7 +1555,7 @@ document.addEventListener('click', function(e){
   var t = e.target.closest('[data-tadd],[data-tslot],[data-trm]'); if (!t) return;
   if (t.dataset.trm){ team.slots[+t.dataset.trm] = null; saveTeam(); renderTeam(); }
   else if (t.dataset.tslot) openSlot(+t.dataset.tslot);
-  else addToTeam(+t.dataset.tadd);
+  else { addToTeam(+t.dataset.tadd); if (t.closest('#t-res')){ $('t-find').value = ''; renderFind(); $('t-find').focus(); } }
 }, true);
 
 // Drag and drop with a mouse, pen or finger. A finger must press and hold first, so the page still scrolls.
@@ -1619,7 +1629,32 @@ document.addEventListener('touchmove', function(e){ if (drag && drag.active) e.p
 document.addEventListener('contextmenu', function(e){ if (e.target.closest('[data-drag]')) e.preventDefault(); });
 document.addEventListener('dragstart', function(e){ if (e.target.closest && e.target.closest('[data-drag]')) e.preventDefault(); });
 
-$('t-game').addEventListener('change', function(){ team.game = this.value; tState.shown = 48; saveTeam(); renderTeam(); });
+$('t-game').addEventListener('change', function(){ team.game = this.value; tState.shown = 48; saveTeam(); renderTeam(); renderFind(); });
+// Search bar at the top of the team builder: type a name or number, tap a result (or press Enter) to add it
+function renderFind(){
+  var raw = $('t-find').value.trim(), q = fold(raw).replace(/^#/,''), res = $('t-res');
+  $('t-findclear').hidden = !raw;
+  if (!q){ res.hidden = true; res.innerHTML = ''; return; }
+  gameFile(team.game).then(function(gf){
+    var ls = learnMap(gf), n = /^\d+$/.test(q) ? +q : null;
+    var hits = P.filter(function(p){ return n!=null ? p.dex===n : p.key.indexOf(q)>=0; })
+      .sort(function(a,b){ return (ls[a.dex]?0:1)-(ls[b.dex]?0:1) || (a.key.indexOf(q)===0?0:1)-(b.key.indexOf(q)===0?0:1) || a.dex-b.dex; }).slice(0,8);  // usable in this game first
+    res.hidden = false;
+    res.innerHTML = hits.length ? hits.map(function(p){
+      var ok = !!ls[p.dex];
+      return '<button class="li" '+(ok?'data-tadd="'+p.dex+'" data-drag="box:'+p.dex+'"':'disabled')+'>'+art(p.dex,48)+
+        '<span class="main"><span class="t">'+esc(p.name)+' <span class="dex">'+dexNo(p.dex)+'</span></span><span class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</span></span>'+
+        '<span class="r">'+(ok?'<span class="add">+ Add</span>':'<span class="muted">Not in '+esc(gameName(team.game))+'</span>')+'</span></button>';
+    }).join('') : '<p class="note" style="border:0">No Pokémon called “'+esc(raw)+'”.</p>';
+  });
+}
+$('t-find').addEventListener('input', debounce(renderFind));
+$('t-find').addEventListener('keydown', function(e){
+  if (e.key==='Enter'){ var first = $('t-res').querySelector('[data-tadd]'); if (first){ e.preventDefault(); first.click(); } }
+  else if (e.key==='Escape'){ this.value = ''; renderFind(); }
+});
+$('t-findclear').addEventListener('click', function(){ $('t-find').value = ''; renderFind(); $('t-find').focus(); });
+
 $('t-lv50').addEventListener('click', function(){ members().forEach(function(m){ m.s.lv = 50; }); saveTeam(); renderTeam(); toast('Everyone is now level 50'); });
 $('t-lv100').addEventListener('click', function(){ members().forEach(function(m){ m.s.lv = 100; }); saveTeam(); renderTeam(); toast('Everyone is now level 100'); });
 var clearArm = 0;
