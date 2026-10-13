@@ -1281,6 +1281,14 @@ function learnMap(gf){
   if (!gf._ls){ var m = {}; gf.learn.forEach(function(r){ var d = m[r[0]]||(m[r[0]]={}); (d[r[1]]||(d[r[1]]=[])).push(r); }); gf._ls = m; }
   return gf._ls;
 }
+// Level-up moves only count once the Pokémon has reached that level; TMs, egg and tutor moves are always open.
+// Level 0 means it learns the move on evolving, 1 means it knows it from the start.
+function levelUpAt(rows){ var best = null; (rows||[]).forEach(function(r){ if (D.learn_methods[r[2]]==='level-up' && (best==null || r[3]<best)) best = r[3]; }); return best; }
+function learnableAt(rows, lv){
+  if (!rows) return false;
+  if (rows.some(function(r){ return D.learn_methods[r[2]]!=='level-up'; })) return true;
+  var at = levelUpAt(rows); return at!=null && at<=lv;
+}
 function damaging(m){ return m && m.cls!=='status' && m.power; }
 function teamData(){ return Promise.all([gameFile(team.game), loadMoves(), loadItems()]); }
 
@@ -1313,7 +1321,9 @@ function renderTeam(){
         var m = moveIn(id, team.game); if (!m) return '<span class="no">?</span>';
         return '<span><i style="background:'+(TYPE_COLOR[m.type]||'var(--muted)')+'"></i>'+esc(m.name)+'</span>';
       }).join('');
-      var bad = !known ? 'Not in '+esc(gameName(team.game)) : s.moves.some(function(id){return id && !known[id];}) ? 'A move it can\'t learn here' : '';
+      var late = known && s.moves.filter(function(id){ return id && known[id] && !learnableAt(known[id], s.lv); })[0];
+      var bad = !known ? 'Not in '+esc(gameName(team.game)) : s.moves.some(function(id){return id && !known[id];}) ? 'A move it can\'t learn here'
+        : late ? esc(MOVE[late] ? MOVE[late].name : 'A move')+' needs Lv '+levelUpAt(known[late]) : '';
       return '<div class="ts" data-slot="'+i+'" data-drag="slot:'+i+'">'+
         '<button class="open" data-tslot="'+i+'" aria-label="Edit '+esc(p.name)+'"><span class="hd">'+art(p.dex,innerWidth<520?52:64)+'<span class="who"><span class="nm">'+esc(p.name)+'</span>'+
         '<span class="lv">Lv '+s.lv+(it?' · '+icon(it.code,22)+esc(it.name):'')+'</span><span class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</span></span></span>'+
@@ -1390,7 +1400,7 @@ function teamCover(gf){
       var bestMv = null;
       Object.keys(ls[m.s.dex]||{}).forEach(function(id){
         var mv = moveIn(+id, code);
-        if (damaging(mv) && hits(mv.type, t)>1 && (!bestMv || mv.power>bestMv.power)) bestMv = mv;
+        if (learnableAt(ls[m.s.dex][id], m.s.lv) && damaging(mv) && hits(mv.type, t)>1 && (!bestMv || mv.power>bestMv.power)) bestMv = mv;
       });
       if (bestMv) out.push({m:m, mv:bestMv});
     });
@@ -1490,17 +1500,34 @@ function openSlot(i){
   var s = team.slots[i]; if (!s) return;
   teamData().then(function(r){
     var gf = r[0], p = BYDEX[s.dex], known = learnMap(gf)[s.dex] || {};
+    // a move goes in every group it can be learned by: a move taught by TM and by levelling up shows in both
     var byMeth = {};
-    Object.keys(known).forEach(function(id){ var mv = moveIn(+id, team.game); if (!mv) return; var meth = D.learn_methods[known[id][0][2]]; (byMeth[meth]||(byMeth[meth]=[])).push(mv); });
+    Object.keys(known).forEach(function(id){
+      var mv = moveIn(+id, team.game); if (!mv) return;
+      known[id].forEach(function(r){ var meth = D.learn_methods[r[2]], g = byMeth[meth]||(byMeth[meth]=[]); if (g.indexOf(mv)<0) g.push(mv); });
+    });
+    function lvLabel(at){ return at===0 ? 'On evolving' : at<=1 ? 'Start' : 'Lv '+at; }
     function moveSel(k){
       var cur = s.moves[k], opts = '<option value="0">No move</option>';
       if (cur && !known[cur] && MOVE[cur]) opts += '<option value="'+cur+'" selected>'+esc(MOVE[cur].name)+' (can\'t learn here)</option>';
       ['level-up','machine','egg','tutor'].concat(Object.keys(byMeth)).filter(function(m,ix,a){return byMeth[m] && a.indexOf(m)===ix;}).forEach(function(meth){
-        opts += '<optgroup label="'+esc(METHOD_LABEL[meth]||words(meth))+'">'+byMeth[meth].slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).map(function(mv){
-          return '<option value="'+mv.id+'"'+(mv.id===cur?' selected':'')+'>'+esc(mv.name)+' · '+mv.type+(mv.power?' · '+mv.power:'')+'</option>';
+        var list = byMeth[meth].slice(), lvl = meth==='level-up';
+        list.sort(lvl ? function(a,b){ return levelUpAt(known[a.id])-levelUpAt(known[b.id]) || String(a.name).localeCompare(String(b.name)); }
+                      : function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+        opts += '<optgroup label="'+esc(METHOD_LABEL[meth]||words(meth))+'">'+list.map(function(mv){
+          var at = lvl ? levelUpAt(known[mv.id]) : null, locked = lvl && at>s.lv && !learnableAt(known[mv.id], s.lv);
+          if (lvl && at>s.lv && !locked) return '';  // it can learn this another way, so it is listed in that group
+          return '<option value="'+mv.id+'"'+(mv.id===cur?' selected':'')+(locked && mv.id!==cur?' disabled':'')+'>'+(lvl?lvLabel(at)+' · ':'')+esc(mv.name)+' · '+mv.type+(mv.power?' · '+mv.power:'')+(locked?(mv.id===cur?' (needs Lv '+at+')':' (not yet)'):'')+'</option>';
         }).join('')+'</optgroup>';
       });
       return '<label class="lbl-sel">Move '+(k+1)+'<select data-mv="'+k+'">'+opts+'</select></label>';
+    }
+    function drawMoves(){
+      var box = $('e-moves'); if (!box) return;
+      box.innerHTML = [0,1,2,3].map(moveSel).join('');
+      box.querySelectorAll('[data-mv]').forEach(function(el){ el.onchange = function(){ s.moves[+el.dataset.mv] = +el.value; changed(); }; });
+      var late = s.moves.filter(function(id){ return id && known[id] && !learnableAt(known[id], s.lv); });
+      $('e-late').textContent = late.length ? late.map(function(id){ return MOVE[id].name+' needs level '+levelUpAt(known[id]); }).join('. ')+'. Raise the level or pick another move.' : '';
     }
     var holds = ITEMS.filter(function(it){return it.name && HOLD_CATS.indexOf(it.cat)>=0;}).sort(function(a,b){return a.name.localeCompare(b.name);});
     var abil = ABIL[s.dex] || [];
@@ -1509,8 +1536,8 @@ function openSlot(i){
         '<button class="chip" data-dex="'+p.dex+'" style="align-self:flex-start;padding:5px 12px">Open Pokédex page</button></div></div>'+
       '<div class="ed">'+
         '<div><span class="lab">Level</span><div class="lvrow"><input type="range" id="e-lv" min="1" max="100" value="'+s.lv+'" aria-label="Level"><input class="num" type="number" id="e-lvn" min="1" max="100" value="'+s.lv+'" aria-label="Level number"></div></div>'+
-        '<div><h3>Moves</h3><p class="sub" style="margin-bottom:6px">'+(Object.keys(known).length ? 'Everything '+esc(p.name)+' can learn in '+esc(gameName(team.game))+', by how it learns it.' : esc(p.name)+' has no moves in '+esc(gameName(team.game))+'. Pick another game at the top of the Team tab.')+'</p>'+
-          '<div class="grid2">'+[0,1,2,3].map(moveSel).join('')+'</div></div>'+
+        '<div><h3>Moves</h3><p class="sub" style="margin-bottom:6px">'+(Object.keys(known).length ? 'What '+esc(p.name)+' can learn in '+esc(gameName(team.game))+' at level '+'<b id="e-lvtxt">'+s.lv+'</b>. Level-up moves open as the level rises. TMs, egg moves and tutor moves are always open.' : esc(p.name)+' has no moves in '+esc(gameName(team.game))+'. Pick another game at the top of the Team tab.')+'</p>'+
+          '<div class="grid2" id="e-moves"></div><p class="sub" id="e-late" role="status" style="color:var(--accent);margin-top:6px"></p></div>'+
         '<div class="grid2">'+
           '<label class="lbl-sel">Ability<select id="e-ab">'+abil.map(function(a,k){return '<option value="'+k+'"'+(k===s.ab?' selected':'')+'>'+esc(a[2])+(a[3]?' (hidden)':'')+'</option>';}).join('')+'</select></label>'+
           '<label class="lbl-sel">Held item<select id="e-item"><option value="0">No item</option>'+holds.map(function(it){return '<option value="'+it.id+'"'+(it.id===s.item?' selected':'')+'>'+esc(it.name)+'</option>';}).join('')+'</select></label>'+
@@ -1534,12 +1561,11 @@ function openSlot(i){
       $('e-evs').querySelectorAll('[data-iv]').forEach(function(el){ el.onchange = function(){ s.iv[+el.dataset.iv] = clamp(el.value,0,31); drawStats(); changed(); }; });
       var a = abil[s.ab]; $('e-abdesc').textContent = a && a[4] ? a[2]+': '+a[4] : '';
     }
-    drawStats();
-    function setLv(v){ s.lv = clamp(v,1,100); $('e-lv').value = s.lv; $('e-lvn').value = s.lv; drawStats(); }
+    drawStats(); drawMoves();
+    function setLv(v){ s.lv = clamp(v,1,100); $('e-lv').value = s.lv; $('e-lvn').value = s.lv; var t = $('e-lvtxt'); if (t) t.textContent = s.lv; drawStats(); drawMoves(); }
     $('e-lv').oninput = function(){ setLv(this.value); };
     $('e-lv').onchange = changed;
     $('e-lvn').onchange = function(){ setLv(this.value); changed(); };
-    $('dlgbody').querySelectorAll('[data-mv]').forEach(function(el){ el.onchange = function(){ s.moves[+el.dataset.mv] = +el.value; changed(); }; });
     $('e-ab').onchange = function(){ s.ab = +this.value; drawStats(); changed(); };
     $('e-item').onchange = function(){ s.item = +this.value; changed(); };
     $('e-nat').onchange = function(){ s.nat = +this.value; drawStats(); changed(); };
