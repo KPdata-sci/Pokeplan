@@ -9,7 +9,7 @@ python3 build_dashboard.py                                        # dashboard_te
 
 What the page answers: every Pokémon (stats, abilities, evolution chain, moves per game, Pokédex text per game,
 where to catch it), every game (its Pokédex, new Pokémon, what each TM teaches, wild Pokémon per place, held items),
-every move (how it changed between eras, who learns it, which TM teaches it) and every item (what it does, which
+a team builder (six slots filled by drag and drop or a tap; level, moves the Pokémon can learn in the chosen game, ability, held item, nature, EVs and IVs; the team's shared weaknesses, move coverage with moves that would fill each gap, speed order, and Showdown text import and export), every move (how it changed between eras, who learns it, which TM teaches it) and every item (what it does, which
 evolutions use it, which wild Pokémon hold it).
 
 `build_dashboard.py` keeps the first load small. The page carries the Pokémon list, games, evolutions and type chart;
