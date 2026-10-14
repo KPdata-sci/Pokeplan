@@ -2,7 +2,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: tabs across the top (Pokémon, Games, Moves, Items, Types, Charts, Pipeline); one tab on screen at a time.
+/* Layout: tabs across the top (Pokémon, Team builder, Games, Moves, Items, Types, Charts, Pipeline); one tab on screen at a time.
    Anything you tap opens a panel; panels link to each other (a move's panel lists Pokémon, and so on).
    Per-game data loads from data/ only when it is needed. One column on phones.
    Bars use reference palette slot 1; the type chart uses the blue / grey / red diverging scale.
@@ -279,6 +279,86 @@ dialog::backdrop{background:rgba(8,10,14,.6)}
 .mvrow.hit{cursor:pointer}
 .mvrow.hit:hover .nm{text-decoration:underline}
 .loading{color:var(--muted);font-size:16px;padding:8px 0}
+
+/* team builder: six slots, a box of Pokémon to drag from, and a team report underneath */
+.tbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;justify-content:space-between}
+.tbar .lbl-sel{flex:1 1 240px;max-width:360px}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.obtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;font-size:15px;cursor:pointer;min-height:44px}
+.obtn:hover{border-color:var(--muted)}
+.obtn.danger{color:var(--accent)}
+.tslots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.tslots{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ts{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;min-height:156px;min-width:0;display:flex;transition:border-color .12s,box-shadow .12s}
+.ts.empty{border:2px dashed var(--line);background:transparent;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:15px;padding:12px}
+.ts.empty b{display:block;font:700 30px/1 var(--display);color:var(--line);margin-bottom:6px}
+.ts.over{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.ts.lift{opacity:.4}
+.ts .open{all:unset;box-sizing:border-box;cursor:pointer;flex:1;display:flex;flex-direction:column;gap:8px;padding:12px 14px;min-width:0}
+.ts .open:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:16px}
+.ts .hd{display:flex;gap:10px;align-items:center;min-width:0;padding-right:34px}
+.ts .who{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ts .nm{font:700 18px/1.15 var(--display);overflow-wrap:anywhere}
+.ts .lv{font:600 13px var(--mono);color:var(--muted);display:flex;align-items:center;gap:6px}
+.ts .mv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:14px}
+.ts .mv span{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts .mv i{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--line)}
+.ts .mv .no{color:var(--muted)}
+.ts .warnchip{font-size:13px;font-weight:600;color:var(--accent)}
+@media (max-width:520px){.ts.empty{min-height:104px}.ts .mv{grid-template-columns:minmax(0,1fr)}.ts .hd{flex-direction:column;align-items:flex-start;gap:6px;padding-right:0}.ts .nm{font-size:16px;overflow-wrap:break-word}.ts .open{padding:10px 12px}}
+.trm{position:absolute;top:8px;right:8px;border:0;background:var(--sunk);border-radius:10px;width:36px;height:36px;font-size:20px;line-height:1;cursor:pointer;color:var(--fg)}
+[data-drag]{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.box{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.bx{all:unset;box-sizing:border-box;cursor:grab;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0;font-size:14px;font-weight:600;line-height:1.2}
+.bx:hover{border-color:var(--muted)}
+.bx:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.bx .n{overflow-wrap:anywhere}
+.bx.in{border-color:var(--s1)}
+.ghost{position:fixed;left:0;top:0;z-index:40;pointer-events:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.35))}
+body.dragging,body.dragging *{cursor:grabbing!important}
+.mx{border-collapse:separate;border-spacing:3px;width:auto;font-size:14px}
+.mx th,.mx td{border:0;padding:0;text-transform:none;letter-spacing:0}
+.mx thead th{padding-bottom:2px;text-align:center}
+.mx thead th .art{margin:0 auto}
+.mx th.tn{padding-right:6px;text-align:left}
+.mx td.c{width:36px;height:32px;text-align:center;border-radius:6px;font:600 12.5px var(--mono)}
+.mx td.c.x1{color:var(--muted);background:var(--sunk)}
+.mx td.n{min-width:34px;text-align:center;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.mx tr.bad th.tn .ty{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
+.mx .hd2{font-size:12.5px;color:var(--muted);font-weight:600}
+.lines{display:flex;flex-direction:column;gap:8px}
+.line{display:flex;gap:10px;align-items:flex-start;font-size:16px;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.line .ic{font:700 15px var(--mono);border-radius:6px;padding:0 7px;flex:none;margin-top:2px}
+.line.bad .ic{background:var(--d-2);color:var(--d-ink)}
+.line.ok .ic{background:var(--good-bg);color:var(--good-text)}
+.sugg{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.sugg button{all:unset;cursor:pointer;font-size:15px;color:var(--muted)}
+.sugg button b{color:var(--fg)}
+.sugg button:hover b{text-decoration:underline}
+.sugg button:focus-visible{outline:3px solid var(--accent)}
+.spd{display:flex;flex-direction:column;gap:10px}
+.spd .r{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:2px 12px;align-items:center}
+.spd .r .track{grid-column:2/-1;height:10px}
+.spd .r .nm{font-weight:700}
+.spd .r .v{font:700 16px var(--body);font-variant-numeric:tabular-nums}
+.ed{display:flex;flex-direction:column;gap:14px}
+.lvrow{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:14px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--accent);min-height:32px}
+input.num,textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--surface);color:var(--fg);min-height:44px}
+textarea{font:500 14px/1.5 var(--mono);min-height:220px;resize:vertical}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.evs{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1fr) 54px;gap:6px 10px;align-items:center;font-size:15px}
+.evs .h{font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.evs .out{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.evs .up{color:var(--accent)} .evs .down{color:var(--s1)}
+.edfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.btn.small{min-height:40px;padding:8px 14px;font-size:15px}
+.tsearch{display:flex;flex-direction:column;gap:8px}
+.tres .li .r{flex-direction:row;align-items:center}
+.tres .add{font-weight:700;color:var(--accent);white-space:nowrap}
+.tres .li[disabled]{cursor:default;opacity:.55}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;z-index:50;max-width:calc(100vw - 32px)}
 </style>
 
 <main>
@@ -319,6 +399,23 @@ dialog::backdrop{background:rgba(8,10,14,.6)}
     <div class="cards" id="cards"></div>
     <div class="empty" id="empty" hidden><h3 id="emptymsg"></h3><p class="muted">Check the spelling, or clear the search and filters.</p><button class="btn" id="reset">Clear search and filters</button></div>
     <button class="more" id="more" hidden></button>
+  </section>
+
+  <section id="team" class="stack" role="tabpanel" aria-labelledby="tab-team" hidden>
+    <div class="tbar">
+      <label class="lbl-sel">Game<select id="t-game"></select></label>
+      <div class="acts"><button class="obtn" id="t-lv50">All to Lv 50</button><button class="obtn" id="t-lv100">All to Lv 100</button><button class="obtn danger" id="t-clear">Clear team</button></div>
+    </div>
+    <div class="tsearch">
+      <div class="sbox"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>
+        <input id="t-find" type="search" placeholder="Search for a Pokémon to add" aria-label="Search for a Pokémon to add to your team" aria-controls="t-res" autocomplete="off" spellcheck="false">
+        <button class="clear" id="t-findclear" aria-label="Clear search" hidden>×</button></div>
+      <div class="list tres" id="t-res" hidden></div>
+    </div>
+    <p class="sub" id="t-hint"></p>
+    <div class="tslots" id="t-slots" aria-label="Your team"></div>
+    <div id="t-segs"></div>
+    <div id="t-body" class="stack"></div>
   </section>
 
   <section id="games" class="stack" role="tabpanel" aria-labelledby="tab-games" hidden></section>
@@ -408,6 +505,7 @@ dialog::backdrop{background:rgba(8,10,14,.6)}
 
 <dialog id="dlg" aria-label="Details"><div class="dlg" id="dlgbody"></div></dialog>
 <div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script id="data" type="application/json">{{DATA}}</script>
 <script>
@@ -497,7 +595,7 @@ var ITEMS = null, ITEM = {}, ITEM_BY_CODE = {}, MACH = [], HELD = [];
 function loadItems(){
   return load('data/items.json').then(function(d){
     if (!ITEMS){
-      ITEMS = d.items.map(function(r){return {id:r[0],name:r[1],cat:r[2],cost:r[3],effect:r[4],desc:r[5],kind:r[6],hold:r[7],code:r[8],key:fold(r[1])};});
+      ITEMS = d.items.map(function(r){return {id:r[0],name:r[1]||words(r[8]),cat:r[2],cost:r[3],effect:r[4],desc:r[5],kind:r[6],hold:r[7],code:r[8],key:fold(r[1]||words(r[8]))};});
       ITEMS.forEach(function(x){ITEM[x.id]=x; ITEM_BY_CODE[x.code]=x;});
       MACH = d.machines; HELD = d.held;
     }
@@ -652,12 +750,14 @@ function openPokemon(dex, game, sec){
   var g = GENS[p.gen-1];
   var html = topBar()+
     '<div class="dhead">'+art(p.dex, innerWidth<420?96:128)+'<div class="who"><span class="dex">'+dexNo(p.dex)+(p.rarity!=='regular'?' <span class="tag">'+p.rarity+'</span>':'')+'</span><h2>'+esc(p.name)+'</h2>'+
-      (p.genus?'<span class="muted">'+esc(p.genus)+'</span>':'')+'<div class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</div></div></div>'+
+      (p.genus?'<span class="muted">'+esc(p.genus)+'</span>':'')+'<div class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</div>'+
+      '<button class="btn small" id="d-team" style="align-self:flex-start">Add to team</button></div></div>'+
     segs([['overview','Overview'],['evolution','Evolution'],['moves','Moves'],['dex','Pokédex entries'],['where','Where to find']], pState.sec, 'data-psec')+
     '<div id="psec" class="stack"></div>'+
     '<div class="dnav"><button id="dprev"'+(idx>0?'':' disabled')+'>← Previous</button><button id="dnext"'+(idx>=0&&idx<current.length-1?'':' disabled')+'>Next →</button></div>';
   show(html, function(){ openPokemon(dex); });
   wireTop();
+  $('d-team').onclick = function(){ if (addToTeam(p.dex)) this.textContent = 'Added to team'; };
   $('dprev').onclick = function(){ if (idx>0){ stack.pop(); openPokemon(current[idx-1].dex); } };
   $('dnext').onclick = function(){ if (idx<current.length-1){ if (idx+1>=state.shown){ state.shown+=PAGE; renderList(filtered()); } stack.pop(); openPokemon(current[idx+1].dex); } };
   $('dlgbody').querySelectorAll('[data-psec]').forEach(function(b){ b.onclick = function(){ pState.sec = b.dataset.psec; $('dlgbody').querySelectorAll('[data-psec]').forEach(function(x){x.setAttribute('aria-selected', x===b);}); renderPSec(p); }; });
@@ -1102,8 +1202,496 @@ function renderPipeline(){
   $('martrows').innerHTML = keys.map(function(k){ return '<div class="r"><span>'+cap(k.replace('fact_','').replace(/_/g,' '))+'</span><b>'+fmt(mr[k])+'</b><span class="track"><span class="fill" style="width:'+Math.max(0.8,mr[k]/mx*100).toFixed(1)+'%"></span></span></div>'; }).join('');
 }
 
+
+// ---------- Team builder ----------
+// A team is six slots. Each slot keeps a Pokémon, its level, nature, ability, held item, four moves, EVs and IVs.
+// Everything is worked out in the page from data already loaded: base stats, the type chart for the
+// chosen game's generation, and that game's learnsets (data/games/<game>.json).
+var SHORT = ['HP','Atk','Def','SpA','SpD','Spe'];
+// [name, raised stat, lowered stat]; stat indexes follow STAT_NAMES
+var NATURES = [['Hardy'],['Lonely',1,2],['Brave',1,5],['Adamant',1,3],['Naughty',1,4],['Bold',2,1],['Docile'],['Relaxed',2,5],['Impish',2,3],['Lax',2,4],
+  ['Timid',5,1],['Hasty',5,2],['Serious'],['Jolly',5,3],['Naive',5,4],['Modest',3,1],['Mild',3,2],['Quiet',3,5],['Bashful'],['Rash',3,4],
+  ['Calm',4,1],['Gentle',4,2],['Sassy',4,5],['Careful',4,3],['Quirky']];
+// Abilities that change how much damage a Pokémon takes from a type
+var ABIL_DEF = {'Levitate':{Ground:0},'Flash Fire':{Fire:0},'Well-Baked Body':{Fire:0},'Water Absorb':{Water:0},'Storm Drain':{Water:0},
+  'Dry Skin':{Water:0,Fire:1.25},'Volt Absorb':{Electric:0},'Lightning Rod':{Electric:0},'Motor Drive':{Electric:0},'Sap Sipper':{Grass:0},
+  'Earth Eater':{Ground:0},'Thick Fat':{Fire:0.5,Ice:0.5},'Heatproof':{Fire:0.5},'Water Bubble':{Fire:0.5},'Purifying Salt':{Ghost:0.5},'Fluffy':{Fire:2}};
+var HOLD_CATS = ['held-items','choice','scarves','bad-held-items','type-enhancement','type-protection','in-a-pinch','picky-healing','status-cures',
+  'healing','effort-drop','baking-only','plates','memories','jewels','species-specific','mega-stones','z-crystals','effort-training'];
+var TEAM_GAMES = GAMES.filter(function(g){return g.has_learnset_data && g.category!=='dlc';}).map(function(g){return g.game;});
+var team = {game:DEFAULT_GAME, slots:[null,null,null,null,null,null]};
+var tState = {sec:'add', q:'', type:'', shown:48};
+
+function newSlot(dex){ return {dex:dex, lv:50, nat:0, ab:0, item:0, moves:[0,0,0,0], ev:[0,0,0,0,0,0], iv:[31,31,31,31,31,31]}; }
+function members(){ return team.slots.map(function(s,i){return s && {s:s, i:i, p:BYDEX[s.dex]};}).filter(Boolean); }
+function clamp(v, lo, hi){ v = Math.round(+v); return isNaN(v) ? lo : Math.max(lo, Math.min(hi, v)); }
+function teamGen(){ return GAME[team.game].generation; }
+function abilName(s){ var a = (ABIL[s.dex]||[])[s.ab]; return a ? a[2] : ''; }
+
+// Save the team in this browser, and as a link anyone can open
+function encodeTeam(){
+  return team.game+'~'+team.slots.map(function(s){ return s ? [s.dex,s.lv,s.nat,s.ab,s.item,s.moves.join('.'),s.ev.join('.'),s.iv.join('.')].join('_') : ''; }).join('~');
+}
+function decodeTeam(str){
+  var parts = String(str||'').split('~'); if (parts.length<2 || TEAM_GAMES.indexOf(parts[0])<0) return false;
+  var slots = [];
+  for (var i=1;i<=6;i++){
+    var f = (parts[i]||'').split('_'), dex = +f[0];
+    if (!BYDEX[dex]){ slots.push(null); continue; }
+    var s = newSlot(dex);
+    s.lv = clamp(f[1],1,100); s.nat = clamp(f[2],0,24); s.ab = clamp(f[3],0,(ABIL[dex]||[0]).length-1); s.item = +f[4]||0;
+    s.moves = (f[5]||'').split('.').map(Number).concat([0,0,0,0]).slice(0,4).map(function(x){return x||0;});
+    s.ev = (f[6]||'').split('.').map(function(x){return clamp(x,0,252);}).concat([0,0,0,0,0,0]).slice(0,6);
+    s.iv = (f[7]||'').split('.').map(function(x){return x===''?31:clamp(x,0,31);}).concat([31,31,31,31,31,31]).slice(0,6);
+    slots.push(s);
+  }
+  team = {game:parts[0], slots:slots};
+  return true;
+}
+function saveTeam(){ try{ localStorage.setItem('pokeplan-team', encodeTeam()); }catch(e){} }
+function teamLink(){ return location.href.split('#')[0]+'#team:'+encodeURIComponent(encodeTeam()); }
+(function(){
+  var h = (location.hash||'').slice(1);
+  if (h.indexOf('team:')===0 && decodeTeam(decodeURIComponent(h.slice(5)))) return;
+  try{ var v = localStorage.getItem('pokeplan-team'); if (v) decodeTeam(v); }catch(e){}
+})();
+
+// Stats at the slot's level: the games' own formula
+function calcStats(s){
+  var p = BYDEX[s.dex], n = NATURES[s.nat];
+  return p.stats.map(function(b,i){
+    var core = Math.floor((2*b + s.iv[i] + Math.floor(s.ev[i]/4)) * s.lv / 100);
+    if (i===0) return p.dex===292 ? 1 : core + s.lv + 10;
+    return Math.floor((core+5) * (n[1]===i ? 1.1 : n[2]===i ? 0.9 : 1));
+  });
+}
+// How much damage a slot takes from an attacking type, counting its ability
+function takes(atk, s){
+  var g = TC[teamGen()]; if (!g[atk]) return 1;
+  var p = BYDEX[s.dex], m = typesOf(p).reduce(function(x,d){ return x * (g[atk][d]==null ? 1 : g[atk][d]); }, 1);
+  var a = ABIL_DEF[abilName(s)]; if (a && a[atk]!=null) m *= a[atk];
+  return m;
+}
+function hits(atk, def){ var g = TC[teamGen()]; return g[atk] && g[atk][def]!=null ? g[atk][def] : 1; }
+function multLabel(m){ return m===0 ? '0' : m===0.25 ? '¼' : m===0.5 ? '½' : m===1 ? '1' : m===1.25 ? '1¼' : m+'×'; }
+function multClass(m){ return m===0 ? 'x0' : m<1 ? 'xh' : m>1 ? 'x2' : 'x1'; }
+
+// learnset of one game, by Pokémon: {dex: {moveId: [[dex, move, method, level], ...]}}
+function learnMap(gf){
+  if (!gf._ls){ var m = {}; gf.learn.forEach(function(r){ var d = m[r[0]]||(m[r[0]]={}); (d[r[1]]||(d[r[1]]=[])).push(r); }); gf._ls = m; }
+  return gf._ls;
+}
+// Level-up moves only count once the Pokémon has reached that level; TMs, egg and tutor moves are always open.
+// Level 0 means it learns the move on evolving, 1 means it knows it from the start.
+function levelUpAt(rows){ var best = null; (rows||[]).forEach(function(r){ if (D.learn_methods[r[2]]==='level-up' && (best==null || r[3]<best)) best = r[3]; }); return best; }
+function learnableAt(rows, lv){
+  if (!rows) return false;
+  if (rows.some(function(r){ return D.learn_methods[r[2]]!=='level-up'; })) return true;
+  var at = levelUpAt(rows); return at!=null && at<=lv;
+}
+function damaging(m){ return m && m.cls!=='status' && m.power; }
+function teamData(){ return Promise.all([gameFile(team.game), loadMoves(), loadItems()]); }
+
+function addToTeam(dex){
+  var i = team.slots.indexOf(null);
+  if (i<0){ toast('Your team is full. Remove a Pokémon first.'); return false; }
+  team.slots[i] = newSlot(dex); saveTeam();
+  toast(BYDEX[dex].name+' joined your team ('+members().length+' of 6)');
+  if (state.tab==='team') renderTeam();
+  return true;
+}
+var toastT;
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(function(){ t.hidden = true; }, 2600);
+}
+
+function renderTeam(){
+  var gsel = $('t-game');
+  gsel.innerHTML = TEAM_GAMES.map(function(c){return '<option value="'+c+'"'+(c===team.game?' selected':'')+'>'+esc(gameName(c))+' ('+GAME[c].year+')</option>';}).join('');
+  $('t-hint').textContent = (matchMedia('(pointer:coarse)').matches ? 'Search above and tap a Pokémon to add it, or press and hold one and drag it onto a slot.' : 'Search above, or drag a Pokémon onto a slot. Click one to add it. Drag slots to swap them.')+' Tap a team member to set its level, moves and more.';
+  $('t-slots').innerHTML = '<p class="loading">Loading your team…</p>';
+  teamData().then(function(r){
+    var gf = r[0], ls = learnMap(gf);
+    $('t-slots').innerHTML = team.slots.map(function(s, i){
+      if (!s) return '<div class="ts empty" data-slot="'+i+'"><span><b>'+(i+1)+'</b>Empty slot</span></div>';
+      var p = BYDEX[s.dex], it = ITEM[s.item], known = ls[s.dex];
+      var mv = s.moves.map(function(id){
+        if (!id) return '<span class="no">No move</span>';
+        var m = moveIn(id, team.game); if (!m) return '<span class="no">?</span>';
+        return '<span><i style="background:'+(TYPE_COLOR[m.type]||'var(--muted)')+'"></i>'+esc(m.name)+'</span>';
+      }).join('');
+      var late = known && s.moves.filter(function(id){ return id && known[id] && !learnableAt(known[id], s.lv); })[0];
+      var bad = !known ? 'Not in '+esc(gameName(team.game)) : s.moves.some(function(id){return id && !known[id];}) ? 'A move it can\'t learn here'
+        : late ? esc(MOVE[late] ? MOVE[late].name : 'A move')+' needs Lv '+levelUpAt(known[late]) : '';
+      return '<div class="ts" data-slot="'+i+'" data-drag="slot:'+i+'">'+
+        '<button class="open" data-tslot="'+i+'" aria-label="Edit '+esc(p.name)+'"><span class="hd">'+art(p.dex,innerWidth<520?52:64)+'<span class="who"><span class="nm">'+esc(p.name)+'</span>'+
+        '<span class="lv">Lv '+s.lv+(it?' · '+icon(it.code,22)+esc(it.name):'')+'</span><span class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</span></span></span>'+
+        '<span class="mv">'+mv+'</span>'+(bad?'<span class="warnchip">'+bad+'</span>':'')+'</button>'+
+        '<button class="trm" data-trm="'+i+'" aria-label="Remove '+esc(p.name)+'">×</button></div>';
+    }).join('');
+    var n = members().length;
+    $('t-segs').innerHTML = segs([['add','Add Pokémon'],['weak','Weaknesses'],['cover','Move coverage'],['speed','Stats and speed'],['share','Share']], tState.sec, 'data-tsec');
+    $('t-segs').querySelectorAll('[data-tsec]').forEach(function(b){ b.onclick = function(){ tState.sec = b.dataset.tsec; renderTeam(); }; });
+    var body = $('t-body');
+    if (tState.sec==='add') return teamAdd(gf, body);
+    if (tState.sec==='share') return teamShare(body);
+    if (!n){ body.innerHTML = '<p class="note">Add a Pokémon to see how your team stacks up.</p>'; return; }
+    if (tState.sec==='weak') body.innerHTML = teamWeak();
+    else if (tState.sec==='cover') body.innerHTML = teamCover(gf);
+    else body.innerHTML = teamSpeed();
+  }, function(){ $('t-slots').innerHTML = failMsg(); });
+}
+
+function teamAdd(gf, body){
+  var ls = learnMap(gf);
+  var inTeam = {}; members().forEach(function(m){ inTeam[m.s.dex] = true; });
+  var list = P.filter(function(p){ return ls[p.dex] && (!tState.q || p.key.indexOf(tState.q)>=0 || String(p.dex)===tState.q) && (!tState.type || typesOf(p).indexOf(tState.type)>=0); });
+  var focus = document.activeElement && document.activeElement.id;
+  body.innerHTML = '<div class="filters" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr)">'+
+      '<div class="sbox small"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>'+
+      '<input id="t-q" type="search" placeholder="Find a Pokémon" aria-label="Find a Pokémon to add" autocomplete="off" spellcheck="false" value="'+esc(tState.qRaw||'')+'"></div>'+
+      '<select id="t-type" aria-label="Type"><option value="">All types</option>'+typesInGen(teamGen()).map(function(t){return '<option'+(t===tState.type?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div>'+
+    '<p class="sub">'+fmt(list.length)+' Pokémon can be used in '+esc(gameName(team.game))+'.</p>'+
+    (list.length ? '<div class="box">'+list.slice(0, tState.shown).map(function(p){
+      return '<button class="bx'+(inTeam[p.dex]?' in':'')+'" data-tadd="'+p.dex+'" data-drag="box:'+p.dex+'">'+art(p.dex,64)+'<span class="dex">'+dexNo(p.dex)+'</span><span class="n">'+esc(p.name)+'</span></button>';
+    }).join('')+'</div>' : '<p class="note">No Pokémon match.</p>')+
+    (list.length>tState.shown ? '<button class="more" id="t-more">Show '+Math.min(48, list.length-tState.shown)+' more</button>' : '');
+  var q = $('t-q');
+  q.addEventListener('input', debounce(function(){ tState.qRaw = this.value; tState.q = fold(this.value.trim()); tState.shown = 48; teamAdd(gf, body); }));
+  if (focus==='t-q'){ q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  $('t-type').onchange = function(){ tState.type = this.value; tState.shown = 48; teamAdd(gf, body); };
+  var more = $('t-more'); if (more) more.onclick = function(){ tState.shown += 48; teamAdd(gf, body); };
+}
+
+function teamWeak(){
+  var ms = members(), types = typesInGen(teamGen()), worries = [], rows = '';
+  types.forEach(function(t){
+    var vals = ms.map(function(m){ return takes(t, m.s); });
+    var weak = vals.filter(function(v){return v>1;}).length, res = vals.filter(function(v){return v<1;}).length;
+    var bad = weak>=3 || (weak>=2 && res===0);
+    if (bad) worries.push([t, weak, res]);
+    rows += '<tr'+(bad?' class="bad"':'')+'><th class="tn" scope="row">'+typePill(t)+'</th>'+vals.map(function(v){ return '<td class="c '+multClass(v)+'">'+multLabel(v)+'</td>'; }).join('')+
+      '<td class="n">'+(weak||'')+'</td><td class="n">'+(res||'')+'</td></tr>';
+  });
+  worries.sort(function(a,b){ return (b[1]-b[2])-(a[1]-a[2]); });
+  var lines = worries.length ? worries.map(function(w){
+    return '<div class="line bad"><span class="ic">!</span><span><b>'+w[1]+' of your team '+(w[1]===1?'is':'are')+' weak to '+w[0]+'</b>'+(w[2] ? ', and '+w[2]+' resist'+(w[2]===1?'s':'')+' it.' : ' and nothing resists it.')+'</span></div>';
+  }).join('') : '<div class="line ok"><span class="ic">✓</span><span><b>No shared weakness.</b> Every type is resisted at least as often as it hits hard.</span></div>';
+  return '<div class="panel"><h2>Shared weaknesses</h2><div class="lines">'+lines+'</div></div>'+
+    '<div class="panel"><h2>Damage each Pokémon takes</h2><p class="sub">Rows are the attacking type. 2× and 4× hurt, ½ and ¼ resist, 0 is immune. Abilities such as Levitate are counted. Rules from Generation '+GENS[teamGen()-1].roman+'.</p>'+
+    '<div class="grid-wrap"><table class="mx"><thead><tr><th></th>'+ms.map(function(m){return '<th title="'+esc(m.p.name)+'">'+art(m.p.dex,32)+'</th>';}).join('')+'<th class="hd2">Weak</th><th class="hd2">Resist</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+function teamCover(gf){
+  var ms = members(), types = typesInGen(teamGen()), ls = learnMap(gf), code = team.game;
+  var picked = [];
+  ms.forEach(function(m){ m.s.moves.forEach(function(id){ var mv = id && moveIn(id, code); if (damaging(mv)) picked.push({m:m, mv:mv}); }); });
+  var stabOnly = !picked.length;
+  var attacks = stabOnly ? [].concat.apply([], ms.map(function(m){ return typesOf(m.p).map(function(t){ return {m:m, mv:{type:t, name:t+' moves'}}; }); })) : picked;
+  var groups = {se:[], neutral:[], bad:[]};
+  types.forEach(function(t){
+    var best = 0; attacks.forEach(function(a){ best = Math.max(best, hits(a.mv.type, t)); });
+    (best>1 ? groups.se : best===1 ? groups.neutral : groups.bad).push(t);
+  });
+  function suggest(t){
+    var out = [];
+    ms.forEach(function(m){
+      var bestMv = null;
+      Object.keys(ls[m.s.dex]||{}).forEach(function(id){
+        var mv = moveIn(+id, code);
+        if (learnableAt(ls[m.s.dex][id], m.s.lv) && damaging(mv) && hits(mv.type, t)>1 && (!bestMv || mv.power>bestMv.power)) bestMv = mv;
+      });
+      if (bestMv) out.push({m:m, mv:bestMv});
+    });
+    out.sort(function(a,b){ return b.mv.power-a.mv.power; });
+    return out.slice(0,3).map(function(o){ return '<button data-tslot="'+o.m.i+'"><b>'+esc(o.m.p.name)+'</b> could learn <b>'+esc(o.mv.name)+'</b> ('+o.mv.type+', power '+o.mv.power+')</button>'; }).join('') || '<span class="none">No one on this team can learn a move that hits it hard.</span>';
+  }
+  var kinds = {physical:0, special:0, status:0};
+  ms.forEach(function(m){ m.s.moves.forEach(function(id){ var mv = id && moveIn(id, code); if (mv && kinds[mv.cls]!=null) kinds[mv.cls]++; }); });
+  var gaps = groups.neutral.concat(groups.bad);
+  return (stabOnly ? '<p class="note">No attacking moves picked yet, so this uses each Pokémon\'s own types. Tap a team member to choose its moves.</p>' : '<p class="sub">Your '+picked.length+' attacking move'+(picked.length>1?'s':'')+': '+kinds.physical+' physical, '+kinds.special+' special. Plus '+kinds.status+' status move'+(kinds.status===1?'':'s')+'.</p>')+
+    '<div class="panel"><h2>Hit hard (2× or more)</h2><div class="types">'+(groups.se.map(function(t){return typePill(t);}).join('')||'<span class="none">None yet</span>')+'</div></div>'+
+    (gaps.length ? '<div class="panel"><h2>Nothing hits these hard</h2><p class="sub">Moves your team could learn in '+esc(gameName(code))+' to cover each gap. Tap one to edit that Pokémon.</p><div class="stack" style="gap:12px">'+
+      gaps.map(function(t){ return '<div class="mrow">'+typePill(t, groups.bad.indexOf(t)>=0 ? ' <b>resists all your moves</b>' : '')+'<div class="sugg">'+suggest(t)+'</div></div>'; }).join('')+'</div></div>'
+      : '<div class="line ok"><span class="ic">✓</span><span><b>Full coverage.</b> Every type takes 2× damage from at least one of your moves.</span></div>');
+}
+
+function teamSpeed(){
+  var ms = members().map(function(m){ return Object.assign({st:calcStats(m.s)}, m); });
+  var sorted = ms.slice().sort(function(a,b){ return b.st[5]-a.st[5]; }), top = sorted[0].st[5] || 1;
+  return '<div class="panel"><h2>Who moves first</h2><p class="sub">Speed at each Pokémon\'s level, with its nature, EVs and IVs. The faster Pokémon attacks first.</p><div class="spd">'+
+      sorted.map(function(m){ return '<div class="r">'+art(m.p.dex,40)+'<span class="nm">'+esc(m.p.name)+' <span class="muted" style="font-weight:500">Lv '+m.s.lv+'</span></span><span class="v">'+m.st[5]+'</span><span></span><span class="track"><span class="fill" style="width:'+(m.st[5]/top*100).toFixed(1)+'%"></span></span></div>'; }).join('')+
+    '</div></div>'+
+    '<div class="panel"><h2>Stats at their level</h2><div class="tbl"><table><thead><tr><th>Pokémon</th>'+SHORT.map(function(s){return '<th class="n">'+s+'</th>';}).join('')+'</tr></thead><tbody>'+
+      ms.map(function(m){ return '<tr><td><b>'+esc(m.p.name)+'</b></td>'+m.st.map(function(v){return '<td class="n">'+v+'</td>';}).join('')+'</tr>'; }).join('')+
+    '</tbody></table></div></div>';
+}
+
+// Showdown text, the format competitive players paste between team builders and battle simulators
+function toShowdown(){
+  return members().map(function(m){
+    var s = m.s, it = ITEM[s.item], n = NATURES[s.nat], out = [m.p.name+(it?' @ '+it.name:'')];
+    if (abilName(s)) out.push('Ability: '+abilName(s));
+    if (s.lv!==100) out.push('Level: '+s.lv);
+    var ev = s.ev.map(function(v,i){return v ? v+' '+SHORT[i] : '';}).filter(Boolean); if (ev.length) out.push('EVs: '+ev.join(' / '));
+    out.push(n[0]+' Nature');
+    var iv = s.iv.map(function(v,i){return v!==31 ? v+' '+SHORT[i] : '';}).filter(Boolean); if (iv.length) out.push('IVs: '+iv.join(' / '));
+    s.moves.forEach(function(id){ if (id && MOVE[id]) out.push('- '+MOVE[id].name); });
+    return out.join('\n');
+  }).join('\n\n');
+}
+function findByName(list, name){
+  var k = fold(String(name).trim()).replace(/[^a-z0-9]/g,'');
+  for (var i=0;i<list.length;i++) if (list[i].key.replace(/[^a-z0-9]/g,'')===k) return list[i];
+  return null;
+}
+function fromShowdown(txt){
+  var slots = [], missed = [];
+  txt.replace(/\r/g,'').split(/\n\s*\n/).forEach(function(block){
+    var lines = block.split('\n').map(function(l){return l.trim();}).filter(Boolean); if (!lines.length || slots.length>=6) return;
+    var head = lines[0], item = null, at = head.lastIndexOf(' @ ');
+    if (at>=0){ item = head.slice(at+3); head = head.slice(0,at); }
+    head = head.replace(/\s*\((M|F)\)\s*$/,'').trim();
+    var nick = head.match(/\(([^)]+)\)\s*$/), name = nick ? nick[1] : head;
+    var p = findByName(P, name) || findByName(P, name.split('-')[0]);
+    if (!p){ missed.push(name); return; }
+    var s = newSlot(p.dex); s.lv = 100;
+    if (item){ var it = findByName(ITEMS, item); if (it) s.item = it.id; }
+    var mi = 0;
+    lines.slice(1).forEach(function(l){
+      var m;
+      if ((m = l.match(/^Ability:\s*(.+)$/i))){ (ABIL[p.dex]||[]).forEach(function(a,i){ if (fold(a[2])===fold(m[1].trim())) s.ab = i; }); }
+      else if ((m = l.match(/^Level:\s*(\d+)/i))) s.lv = clamp(m[1],1,100);
+      else if ((m = l.match(/^(EVs|IVs):\s*(.+)$/i))){
+        var arr = m[1].toUpperCase()==='EVS' ? s.ev : s.iv;
+        m[2].split('/').forEach(function(part){ var q = part.trim().match(/^(\d+)\s+(\w+)/); if (!q) return; var i = SHORT.map(function(x){return x.toLowerCase();}).indexOf(q[2].toLowerCase()); if (i>=0) arr[i] = clamp(q[1],0,arr===s.ev?252:31); });
+      }
+      else if ((m = l.match(/^(\w+)\s+Nature/i))){ NATURES.forEach(function(n,i){ if (n[0].toLowerCase()===m[1].toLowerCase()) s.nat = i; }); }
+      else if ((m = l.match(/^[-~]\s*(.+)$/)) && mi<4){ var mv = findByName(MOVES, m[1].replace(/\s*\[.*\]$/,'')); if (mv) s.moves[mi++] = mv.id; else missed.push(m[1]); }
+    });
+    slots.push(s);
+  });
+  return {slots:slots, missed:missed};
+}
+function teamShare(body){
+  var txt = toShowdown();
+  body.innerHTML = '<div class="panel"><h2>Share this team</h2><p class="sub">The link opens this page with your team filled in. Your team is also kept in this browser for next time.</p>'+
+      '<div class="acts"><button class="btn small" id="t-link">Copy link</button><button class="obtn" id="t-copy"'+(txt?'':' disabled')+'>Copy Showdown text</button></div></div>'+
+    '<div class="panel"><h2>Showdown text</h2><p class="sub">The text format Pokémon Showdown and most team builders use. Paste a team below and press Import to load it.</p>'+
+      '<textarea id="t-text" spellcheck="false" aria-label="Team as Showdown text">'+esc(txt)+'</textarea>'+
+      '<div class="acts"><button class="btn small" id="t-import">Import</button></div><p class="sub" id="t-msg" role="status"></p></div>';
+  $('t-link').onclick = function(){ copyText(teamLink(), 'Link copied'); };
+  $('t-copy').onclick = function(){ copyText(toShowdown(), 'Showdown text copied'); };
+  $('t-import').onclick = function(){
+    var r = fromShowdown($('t-text').value);
+    if (!r.slots.length){ $('t-msg').textContent = 'No Pokémon found in that text.'; return; }
+    team.slots = r.slots.concat([null,null,null,null,null,null]).slice(0,6); saveTeam(); renderTeam();
+    toast('Imported '+r.slots.length+' Pokémon'+(r.missed.length?'. Could not match: '+r.missed.join(', '):''));
+  };
+}
+function copyText(text, done){
+  function fallback(){ var ta = $('t-text'); if (ta){ ta.value = text; ta.focus(); ta.select(); } toast('Select the text and copy it'); }
+  try{ navigator.clipboard.writeText(text).then(function(){ toast(done); }, fallback); }catch(e){ fallback(); }
+}
+
+// One team member: level, moves, ability, item, nature, EVs and IVs
+function openSlot(i){
+  var s = team.slots[i]; if (!s) return;
+  teamData().then(function(r){
+    var gf = r[0], p = BYDEX[s.dex], known = learnMap(gf)[s.dex] || {};
+    // a move goes in every group it can be learned by: a move taught by TM and by levelling up shows in both
+    var byMeth = {};
+    Object.keys(known).forEach(function(id){
+      var mv = moveIn(+id, team.game); if (!mv) return;
+      known[id].forEach(function(r){ var meth = D.learn_methods[r[2]], g = byMeth[meth]||(byMeth[meth]=[]); if (g.indexOf(mv)<0) g.push(mv); });
+    });
+    function lvLabel(at){ return at===0 ? 'On evolving' : at<=1 ? 'Start' : 'Lv '+at; }
+    function moveSel(k){
+      var cur = s.moves[k], opts = '<option value="0">No move</option>';
+      if (cur && !known[cur] && MOVE[cur]) opts += '<option value="'+cur+'" selected>'+esc(MOVE[cur].name)+' (can\'t learn here)</option>';
+      ['level-up','machine','egg','tutor'].concat(Object.keys(byMeth)).filter(function(m,ix,a){return byMeth[m] && a.indexOf(m)===ix;}).forEach(function(meth){
+        var list = byMeth[meth].slice(), lvl = meth==='level-up';
+        list.sort(lvl ? function(a,b){ return levelUpAt(known[a.id])-levelUpAt(known[b.id]) || String(a.name).localeCompare(String(b.name)); }
+                      : function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+        opts += '<optgroup label="'+esc(METHOD_LABEL[meth]||words(meth))+'">'+list.map(function(mv){
+          var at = lvl ? levelUpAt(known[mv.id]) : null, locked = lvl && at>s.lv && !learnableAt(known[mv.id], s.lv);
+          if (lvl && at>s.lv && !locked) return '';  // it can learn this another way, so it is listed in that group
+          return '<option value="'+mv.id+'"'+(mv.id===cur?' selected':'')+(locked && mv.id!==cur?' disabled':'')+'>'+(lvl?lvLabel(at)+' · ':'')+esc(mv.name)+' · '+mv.type+(mv.power?' · '+mv.power:'')+(locked?(mv.id===cur?' (needs Lv '+at+')':' (not yet)'):'')+'</option>';
+        }).join('')+'</optgroup>';
+      });
+      return '<label class="lbl-sel">Move '+(k+1)+'<select data-mv="'+k+'">'+opts+'</select></label>';
+    }
+    function drawMoves(){
+      var box = $('e-moves'); if (!box) return;
+      box.innerHTML = [0,1,2,3].map(moveSel).join('');
+      box.querySelectorAll('[data-mv]').forEach(function(el){ el.onchange = function(){ s.moves[+el.dataset.mv] = +el.value; changed(); }; });
+      var late = s.moves.filter(function(id){ return id && known[id] && !learnableAt(known[id], s.lv); });
+      $('e-late').textContent = late.length ? late.map(function(id){ return MOVE[id].name+' needs level '+levelUpAt(known[id]); }).join('. ')+'. Raise the level or pick another move.' : '';
+    }
+    var holds = ITEMS.filter(function(it){return it.name && HOLD_CATS.indexOf(it.cat)>=0;}).sort(function(a,b){return a.name.localeCompare(b.name);});
+    var abil = ABIL[s.dex] || [];
+    var html = topBar()+
+      '<div class="dhead">'+art(p.dex, innerWidth<420?80:104)+'<div class="who"><span class="dex">Slot '+(i+1)+' · '+dexNo(p.dex)+'</span><h2>'+esc(p.name)+'</h2><div class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</div>'+
+        '<button class="chip" data-dex="'+p.dex+'" style="align-self:flex-start;padding:5px 12px">Open Pokédex page</button></div></div>'+
+      '<div class="ed">'+
+        '<div><span class="lab">Level</span><div class="lvrow"><input type="range" id="e-lv" min="1" max="100" value="'+s.lv+'" aria-label="Level"><input class="num" type="number" id="e-lvn" min="1" max="100" value="'+s.lv+'" aria-label="Level number"></div></div>'+
+        '<div><h3>Moves</h3><p class="sub" style="margin-bottom:6px">'+(Object.keys(known).length ? 'What '+esc(p.name)+' can learn in '+esc(gameName(team.game))+' at level '+'<b id="e-lvtxt">'+s.lv+'</b>. Level-up moves open as the level rises. TMs, egg moves and tutor moves are always open.' : esc(p.name)+' has no moves in '+esc(gameName(team.game))+'. Pick another game at the top of the Team tab.')+'</p>'+
+          '<div class="grid2" id="e-moves"></div><p class="sub" id="e-late" role="status" style="color:var(--accent);margin-top:6px"></p></div>'+
+        '<div class="grid2">'+
+          '<label class="lbl-sel">Ability<select id="e-ab">'+abil.map(function(a,k){return '<option value="'+k+'"'+(k===s.ab?' selected':'')+'>'+esc(a[2])+(a[3]?' (hidden)':'')+'</option>';}).join('')+'</select></label>'+
+          '<label class="lbl-sel">Held item<select id="e-item"><option value="0">No item</option>'+holds.map(function(it){return '<option value="'+it.id+'"'+(it.id===s.item?' selected':'')+'>'+esc(it.name)+'</option>';}).join('')+'</select></label>'+
+          '<label class="lbl-sel">Nature<select id="e-nat">'+NATURES.map(function(n,k){return '<option value="'+k+'"'+(k===s.nat?' selected':'')+'>'+n[0]+(n[1]?' (+'+SHORT[n[1]]+', −'+SHORT[n[2]]+')':' (no change)')+'</option>';}).join('')+'</select></label>'+
+          '<label class="lbl-sel">Team slot<select id="e-pos">'+[0,1,2,3,4,5].map(function(k){return '<option value="'+k+'"'+(k===i?' selected':'')+'>Slot '+(k+1)+'</option>';}).join('')+'</select></label>'+
+        '</div>'+
+        '<p class="sub" id="e-abdesc"></p>'+
+        '<details'+(s.ev.some(Boolean)?' open':'')+'><summary>Training: EVs and IVs</summary><p class="sub" style="margin-block:6px">EVs (0 to 252 each, 510 in total) and IVs (0 to 31) raise stats. Competitive Pokémon usually have 31 in every IV.</p>'+
+          '<div class="evs" id="e-evs"></div></details>'+
+        '<div class="edfoot"><button class="obtn danger" id="e-rm">Remove from team</button><button class="btn" id="e-done">Done</button></div>'+
+      '</div>';
+    show(html, function(){ openSlot(i); });
+    wireTop();
+    function changed(){ saveTeam(); renderTeam(); }
+    function drawStats(){
+      var st = calcStats(s), n = NATURES[s.nat], used = s.ev.reduce(function(a,b){return a+b;},0);
+      $('e-evs').innerHTML = '<span class="h">Stat</span><span class="h">EVs</span><span class="h">IVs</span><span class="h" style="text-align:right">Lv '+s.lv+'</span>'+
+        STAT_NAMES.map(function(name,k){ return '<span>'+SHORT[k]+'</span><input class="num" type="number" min="0" max="252" step="4" data-ev="'+k+'" value="'+s.ev[k]+'" aria-label="'+name+' EVs"><input class="num" type="number" min="0" max="31" data-iv="'+k+'" value="'+s.iv[k]+'" aria-label="'+name+' IVs"><span class="out'+(n[1]===k?' up':n[2]===k?' down':'')+'">'+st[k]+'</span>'; }).join('')+
+        '<span style="grid-column:1/-1" class="sub">'+used+' of 510 EVs used'+(used>510?'. That is more than the games allow.':'.')+'</span>';
+      $('e-evs').querySelectorAll('[data-ev]').forEach(function(el){ el.onchange = function(){ s.ev[+el.dataset.ev] = clamp(el.value,0,252); drawStats(); changed(); }; });
+      $('e-evs').querySelectorAll('[data-iv]').forEach(function(el){ el.onchange = function(){ s.iv[+el.dataset.iv] = clamp(el.value,0,31); drawStats(); changed(); }; });
+      var a = abil[s.ab]; $('e-abdesc').textContent = a && a[4] ? a[2]+': '+a[4] : '';
+    }
+    drawStats(); drawMoves();
+    function setLv(v){ s.lv = clamp(v,1,100); $('e-lv').value = s.lv; $('e-lvn').value = s.lv; var t = $('e-lvtxt'); if (t) t.textContent = s.lv; drawStats(); drawMoves(); }
+    $('e-lv').oninput = function(){ setLv(this.value); };
+    $('e-lv').onchange = changed;
+    $('e-lvn').onchange = function(){ setLv(this.value); changed(); };
+    $('e-ab').onchange = function(){ s.ab = +this.value; drawStats(); changed(); };
+    $('e-item').onchange = function(){ s.item = +this.value; changed(); };
+    $('e-nat').onchange = function(){ s.nat = +this.value; drawStats(); changed(); };
+    $('e-pos').onchange = function(){ var j = +this.value, t = team.slots[j]; team.slots[j] = s; team.slots[i] = t; changed(); stack.pop(); openSlot(j); };
+    $('e-rm').onclick = function(){ team.slots[i] = null; closeDetail(); changed(); };
+    $('e-done').onclick = closeDetail;
+  }, function(){ toast('Could not load this data. Check your connection.'); });
+}
+
+// Clicks and taps in the Team tab
+document.addEventListener('click', function(e){
+  if (Date.now() < noClickUntil){ e.preventDefault(); e.stopPropagation(); return; }
+  var t = e.target.closest('[data-tadd],[data-tslot],[data-trm]'); if (!t) return;
+  if (t.dataset.trm){ team.slots[+t.dataset.trm] = null; saveTeam(); renderTeam(); }
+  else if (t.dataset.tslot) openSlot(+t.dataset.tslot);
+  else { addToTeam(+t.dataset.tadd); if (t.closest('#t-res')){ $('t-find').value = ''; renderFind(); $('t-find').focus(); } }
+}, true);
+
+// Drag and drop with a mouse, pen or finger. A finger must press and hold first, so the page still scrolls.
+var drag = null, noClickUntil = 0;
+document.addEventListener('pointerdown', function(e){
+  var src = e.target.closest('[data-drag]');
+  if (!src || e.button>0 || e.target.closest('.trm')) return;
+  var k = src.dataset.drag.split(':');
+  drag = {kind:k[0], val:+k[1], src:src, x:e.clientX, y:e.clientY, touch:e.pointerType!=='mouse', active:false};
+  if (drag.touch) drag.timer = setTimeout(function(){ if (drag) startDrag(); }, 280);
+});
+function dragDex(){ return drag.kind==='box' ? drag.val : team.slots[drag.val].dex; }
+function startDrag(){
+  drag.active = true;
+  var g = document.createElement('div'); g.className = 'ghost'; g.innerHTML = art(dragDex(), 72);
+  document.body.appendChild(g); drag.ghost = g; moveGhost();
+  document.body.classList.add('dragging');
+  if (drag.kind==='slot') drag.src.classList.add('lift');
+  try{ if (drag.touch && navigator.vibrate) navigator.vibrate(12); }catch(err){}
+  requestAnimationFrame(edgeScroll);
+}
+function moveGhost(){ drag.ghost.style.transform = 'translate('+(drag.x-36)+'px,'+(drag.y-36)+'px)'; }
+document.addEventListener('pointermove', function(e){
+  if (!drag) return;
+  var dist = Math.hypot(e.clientX-drag.x, e.clientY-drag.y);
+  if (!drag.active){
+    if (drag.touch){ if (dist>10){ clearTimeout(drag.timer); drag = null; } return; }
+    if (dist<6) return;
+    startDrag();
+  }
+  drag.x = e.clientX; drag.y = e.clientY; moveGhost(); findOver();
+});
+function findOver(){
+  var el = document.elementFromPoint(drag.x, drag.y), slot = el && el.closest('#t-slots [data-slot]');
+  if (drag.over && drag.over!==slot) drag.over.classList.remove('over');
+  if (slot) slot.classList.add('over');
+  drag.over = slot;
+}
+// near the top or bottom of the screen the page scrolls, so every slot can be reached on a phone
+function edgeScroll(){
+  if (!drag || !drag.active) return;
+  var edge = 80, dy = drag.y<edge ? -(edge-drag.y)/3 : drag.y>innerHeight-edge ? (drag.y-innerHeight+edge)/3 : 0;
+  if (dy){ scrollBy(0, dy); findOver(); }
+  requestAnimationFrame(edgeScroll);
+}
+function endDrag(drop){
+  if (!drag) return;
+  clearTimeout(drag.timer);
+  if (drag.active){
+    noClickUntil = Date.now()+350;
+    if (drop && drag.over){
+      var to = +drag.over.dataset.slot;
+      if (drag.kind==='box'){ team.slots[to] = newSlot(drag.val); toast(BYDEX[drag.val].name+' is in slot '+(to+1)); }
+      else if (to!==drag.val){ var t = team.slots[to]; team.slots[to] = team.slots[drag.val]; team.slots[drag.val] = t; }
+      saveTeam();
+    }
+    if (drag.ghost) drag.ghost.remove();
+    document.body.classList.remove('dragging');
+    var d = drag; drag = null;
+    if (d.over) d.over.classList.remove('over');
+    renderTeam();
+    return;
+  }
+  drag = null;
+}
+document.addEventListener('pointerup', function(){ endDrag(true); });
+document.addEventListener('pointercancel', function(){ endDrag(false); });
+// a blocking touchstart listener keeps the browser waiting on the page, so the touchmove below can stop scrolling once a drag starts
+document.addEventListener('touchstart', function(){}, {passive:false});
+document.addEventListener('touchmove', function(e){ if (drag && drag.active) e.preventDefault(); }, {passive:false});
+document.addEventListener('contextmenu', function(e){ if (e.target.closest('[data-drag]')) e.preventDefault(); });
+document.addEventListener('dragstart', function(e){ if (e.target.closest && e.target.closest('[data-drag]')) e.preventDefault(); });
+
+$('t-game').addEventListener('change', function(){ team.game = this.value; tState.shown = 48; saveTeam(); renderTeam(); renderFind(); });
+// Search bar at the top of the team builder: type a name or number, tap a result (or press Enter) to add it
+function renderFind(){
+  var raw = $('t-find').value.trim(), q = fold(raw).replace(/^#/,''), res = $('t-res');
+  $('t-findclear').hidden = !raw;
+  if (!q){ res.hidden = true; res.innerHTML = ''; return; }
+  gameFile(team.game).then(function(gf){
+    var ls = learnMap(gf), n = /^\d+$/.test(q) ? +q : null;
+    var hits = P.filter(function(p){ return n!=null ? p.dex===n : p.key.indexOf(q)>=0; })
+      .sort(function(a,b){ return (ls[a.dex]?0:1)-(ls[b.dex]?0:1) || (a.key.indexOf(q)===0?0:1)-(b.key.indexOf(q)===0?0:1) || a.dex-b.dex; }).slice(0,8);  // usable in this game first
+    res.hidden = false;
+    res.innerHTML = hits.length ? hits.map(function(p){
+      var ok = !!ls[p.dex];
+      return '<button class="li" '+(ok?'data-tadd="'+p.dex+'" data-drag="box:'+p.dex+'"':'disabled')+'>'+art(p.dex,48)+
+        '<span class="main"><span class="t">'+esc(p.name)+' <span class="dex">'+dexNo(p.dex)+'</span></span><span class="types">'+typesOf(p).map(function(t){return typePill(t);}).join('')+'</span></span>'+
+        '<span class="r">'+(ok?'<span class="add">+ Add</span>':'<span class="muted">Not in '+esc(gameName(team.game))+'</span>')+'</span></button>';
+    }).join('') : '<p class="note" style="border:0">No Pokémon called “'+esc(raw)+'”.</p>';
+  });
+}
+$('t-find').addEventListener('input', debounce(renderFind));
+$('t-find').addEventListener('keydown', function(e){
+  if (e.key==='Enter'){ var first = $('t-res').querySelector('[data-tadd]'); if (first){ e.preventDefault(); first.click(); } }
+  else if (e.key==='Escape'){ this.value = ''; renderFind(); }
+});
+$('t-findclear').addEventListener('click', function(){ $('t-find').value = ''; renderFind(); $('t-find').focus(); });
+
+$('t-lv50').addEventListener('click', function(){ members().forEach(function(m){ m.s.lv = 50; }); saveTeam(); renderTeam(); toast('Everyone is now level 50'); });
+$('t-lv100').addEventListener('click', function(){ members().forEach(function(m){ m.s.lv = 100; }); saveTeam(); renderTeam(); toast('Everyone is now level 100'); });
+var clearArm = 0;
+$('t-clear').addEventListener('click', function(){
+  // a second press within a few seconds confirms, so a stray tap never wipes the team
+  if (members().length && Date.now()>clearArm){ clearArm = Date.now()+4000; this.textContent = 'Press again to clear'; var b = this; setTimeout(function(){ b.textContent = 'Clear team'; }, 4000); return; }
+  clearArm = 0; this.textContent = 'Clear team'; team.slots = [null,null,null,null,null,null]; saveTeam(); renderTeam();
+});
+
 // ---------- tabs + wiring ----------
-var TABS = [['pokemon','Pokémon'],['games','Games'],['moves','Moves'],['items','Items'],['types','Types'],['charts','Charts'],['pipeline','Pipeline']];
+var TABS = [['pokemon','Pokémon'],['team','Team builder'],['games','Games'],['moves','Moves'],['items','Items'],['types','Types'],['charts','Charts'],['pipeline','Pipeline']];
 var TAB_IDS = TABS.map(function(t){return t[0];});
 $('tabs').innerHTML = TABS.map(function(t){return '<button class="tab" role="tab" id="tab-'+t[0]+'" aria-controls="'+t[0]+'" aria-selected="false">'+t[1]+'</button>';}).join('');
 function setTab(t, push){
@@ -1126,6 +1714,7 @@ function render(){
   hideTip();
   if (state.tab==='pokemon'||state.tab==='charts') renderTiles(filtered());
   if (state.tab==='pokemon') renderList(filtered());
+  else if (state.tab==='team') renderTeam();
   else if (state.tab==='games') renderGames();
   else if (state.tab==='moves') renderMoves();
   else if (state.tab==='items') renderItems();
@@ -1154,6 +1743,7 @@ $('i-sort').addEventListener('change', function(){ state.isort=this.value; state
 document.addEventListener('keydown', function(e){ if (e.key==='/' && !/INPUT|SELECT/.test(document.activeElement.tagName) && !$('dlg').open){ e.preventDefault(); if (state.tab!=='pokemon'&&state.tab!=='charts') setTab('pokemon',true); $('q').focus(); } });
 var rt; addEventListener('resize', function(){ clearTimeout(rt); rt=setTimeout(function(){ if (state.tab==='charts') renderCharts(); },150); });
 
-setTab((location.hash||'').slice(1)||'pokemon', false);
+var h0 = (location.hash||'').slice(1);
+setTab(h0.indexOf('team:')===0 ? 'team' : h0||'pokemon', false);
 })();
 </script>
