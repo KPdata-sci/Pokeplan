@@ -1,0 +1,9 @@
+priority,code_pattern,form_category,region_code
+10,-mega(-[xyz])?$,mega,
+20,-primal$,primal,
+30,-gmax$,gigantamax,
+40,-totem(-|$),totem,
+50,-alola(-|$),regional,alola
+51,-galar(-|$),regional,galar
+52,-hisui(-|$),regional,hisui
+53,-paldea(-|$),regional,paldea

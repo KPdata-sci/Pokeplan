@@ -1,6 +1,7 @@
 # Downloaded source data and generated dumps
 api-data/
 *.csv
+!dbt/seeds/*.csv
 raw/
 # Rebuilt by every pipeline run; pokedex_dashboard.html keeps a snapshot of it
 dashboard/dashboard_data.json
@@ -28,3 +29,9 @@ __pycache__/
 *.pyc
 .venv/
 .DS_Store
+
+# dbt build output
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml

@@ -1,0 +1,42 @@
+# Pokeplan transformations: raw JSON -> staging -> star schema (Postgres).
+# The raw layer (schema/01_raw.sql, schema/tools/land.sql) stays outside dbt:
+# dbt starts from raw.api_response. See README.md in this folder.
+name: pokeplan
+version: "2.0.0"
+config-version: 2
+profile: pokeplan
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+vars:
+  # The etl.load_batch row this build belongs to. The pipeline passes it with
+  # --vars; it is stamped on every mart row as _batch_id (the audit column).
+  batch_id: null
+
+# Schemas keep the names the SQL version used (ref, stg, mart), so the serve
+# views, the dashboard export and the example queries work unchanged.
+# macros/generate_schema_name.sql makes dbt use them as written.
+seeds:
+  pokeplan:
+    +schema: ref
+
+models:
+  pokeplan:
+    staging:
+      +schema: stg
+      +materialized: view
+    intermediate:
+      +schema: int
+      +materialized: view
+    marts:
+      +schema: mart
+      +materialized: table
+
+data_tests:
+  pokeplan:
+    # Keep failing rows in a table so a red test can be inspected with SQL.
+    +store_failures: false

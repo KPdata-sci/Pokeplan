@@ -1,0 +1,9 @@
+priority,code_pattern,method_group,chance_unit
+10,^(gift|gift-egg|static|npc-trade|snag|snag-rematch|pokeflute|devon-scope|squirt-bottle|wailmer-pail|island-scan|new-york-pokecenter-wish-eggs)$,one-off,n/a
+11,^(colosseum-|pokemon-channel|pokemon-ranger|pokemon-battle-revolution),one-off,n/a
+20,^roaming-,roaming,n/a
+30,(rod|fishing),fishing,percent
+40,^(surf|surf-spots|seaweed|bubbling-spots|sos-from-bubbling-spot)$,water,percent
+50,^(overworld|wanderer|chase-water),overworld,weight
+60,^(max-raid|dynamax-adventure)$,raid,weight
+99,.*,land,percent

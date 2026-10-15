@@ -1,19 +1,20 @@
 # Pokeplan star schema (Postgres 16), v2
 
-Run in order against an empty database:
+The transformations live in the dbt project in `../dbt` (since October 2026; before that they were the SQL files `02_reference.sql` to `06_tests.sql`, which are in git history). This folder keeps the plain SQL around it and this design write-up.
 
-| File | Layer | What it does |
+| Where | Layer | What it does |
 |---|---|---|
 | `01_raw.sql` | raw / bronze | `raw.api_response` landing table (JSONB, append-only, hash change detection), `etl.load_batch` audit table, `raw.url_id()` helper |
-| `02_reference.sql` | reference / seeds | Domain knowledge the API does not carry: generation years, when mechanics arrived (abilities gen III, physical/special split gen IV...), which games are remakes/DLC/spin-offs, form and encounter-method rules |
-| `03_staging.sql` | staging / silver | One view per grain that flattens the nested JSON, and turns the API's four `past_*` history shapes into eras (`stg.move_era`, `stg.pokemon_stat`, ...) |
-| `04_marts.sql` | mart / gold | 16 dimensions, 2 bridges, 11 facts, plus `mart.pokemon_profile` and the as-of helper `mart.move_in_version_group` |
-| `05_load.sql` | load | `CALL mart.load(batch_id)`: upserts dims on natural key (SCD1; `dim_move` is SCD2), full-refreshes facts, clamps history to the domain timeline, densifies the type chart, sets data-coverage flags |
-| `06_tests.sql` | tests | Grain, referential, structural and domain checks (zero rows = pass), then two warning queries that document source-data quirks |
+| `tools/land.sql` | raw | Lands a dump of the API as a new batch; only new or changed resources get a row |
+| `../dbt/seeds/` | reference | Domain knowledge the API does not carry: generation years, when mechanics arrived (abilities gen III, physical/special split gen IV...), which games are remakes/DLC/spin-offs, form and encounter-method rules |
+| `../dbt/models/staging/` | staging / silver | One view per grain that flattens the nested JSON, and turns the API's four `past_*` history shapes into eras (`stg.move_era`, `stg.pokemon_stat`, ...) |
+| `../dbt/snapshots/` | snapshot | `snapshots.move_era_snapshot`: every version of every move era the pipeline has seen (SCD type 2 on load time) |
+| `../dbt/models/marts/` | mart / gold | 16 dimensions, 2 bridges, 11 facts, plus `mart.pokemon_profile` and the as-of helper `mart.move_in_version_group`. Facts rebuild in full each run; history is clamped to the domain timeline; the type chart is densified |
+| `../dbt/tests/` and the `.yml` files | tests | Grain, referential, structural and domain checks, then two warnings that document source-data quirks |
 | `07_example_queries.sql` | usage | Eleven questions the star answers, including point-in-time and SCD2 joins |
 | `08_serve.sql` | serve | `serve.*` views the dashboard reads (one row per Pokémon card, the type chart, generations, the last pipeline run) |
 
-Pipeline per run: insert a row into `etl.load_batch`, land API responses in `raw.api_response`, then `CALL mart.load(<batch_id>)`, then run `06_tests.sql`. `../pipeline/run_pipeline.sh` does all of this in one command.
+Pipeline per run: land API responses in `raw.api_response` as a new `etl.load_batch`, then `dbt build --vars "{batch_id: N}"`, then the serve views. `../pipeline/run_pipeline.sh` does all of this in one command.
 
 ## Loading without the live API
 
@@ -22,9 +23,10 @@ Pipeline per run: insert a row into `etl.load_batch`, land API responses in `raw
 ```
 git clone --depth 1 --filter=blob:none --sparse https://github.com/PokeAPI/api-data.git
 cd api-data && git sparse-checkout set data/api/v2/<endpoint> ...   # the 21 endpoints staging reads
+psql -d pokeplan -f 01_raw.sql
 python3 tools/dump_to_csv.py api-data/data/api/v2 raw.csv
 psql -d pokeplan -At -v csv="$PWD/raw.csv" -f tools/land.sql   # prints the new batch_id
-psql -d pokeplan -c 'CALL mart.load(<batch_id>)'
+cd ../dbt && dbt build --profiles-dir . --vars "{batch_id: <batch_id>}"
 ```
 
 Endpoints staging reads: generation, version-group, version, region, pokedex, type, stat, ability, move, machine, item, location, location-area, pokemon-species, pokemon, pokemon-form, evolution-chain, move-learn-method, encounter-method, encounter-condition-value, evolution-trigger.
@@ -32,6 +34,8 @@ Endpoints staging reads: generation, version-group, version, region, pokedex, ty
 ## Tested
 
 2026-10-08, PostgreSQL 16.15, full dataset from `PokeAPI/api-data` (commit of 2026-10-07): 13,671 resources, load takes about 42 s and is idempotent (second run: same row counts).
+
+2026-10-15, after the move to dbt (dbt-core 1.12, dbt-postgres 1.11), same dataset: every staging view and every mart table holds exactly the same rows and column types as the SQL version (keys aside, see `../dbt/README.md`), and the dashboard export is byte-identical. `dbt build` takes about 40 s including the tests.
 
 | Table | Rows |
 |---|---|
@@ -49,7 +53,7 @@ Endpoints staging reads: generation, version-group, version, region, pokedex, ty
 | dim_move (eras) | 1,488 for 937 moves |
 | dim_pokemon | 1,351 for 1,025 species |
 
-All 27 checks in sections 1 to 4 of `06_tests.sql` return zero rows. The warnings return 19 rows (encounter tables whose percentages add up to more than 100 in the source: X/Y and ORAS hordes, Sun/Moon grass, some Crystal/HGSS fishing) and 10 rows (games with no learnset or no encounter data: PokeAPI has no wild-encounter data after Sword/Shield, and DLC learnsets are folded into the base game).
+All 27 checks that were in `06_tests.sql` (now in `../dbt/tests/` and the model `.yml` files, with about 200 more column and grain tests added) pass. The two warnings return 19 rows (encounter tables whose percentages add up to more than 100 in the source: X/Y and ORAS hordes, Sun/Moon grass, some Crystal/HGSS fishing) and 10 rows (games with no learnset or no encounter data: PokeAPI has no wild-encounter data after Sword/Shield, and DLC learnsets are folded into the base game).
 
 ## What changed from v1, and why
 

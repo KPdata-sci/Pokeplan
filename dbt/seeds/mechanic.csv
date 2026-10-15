@@ -1,0 +1,19 @@
+mechanic_code,introduced_generation,retired_generation,description
+special-stat,1,1,One Special stat for both special attack and defence
+special-split,2,,Special split into Special Attack and Special Defense
+held-items,2,,Pokemon can hold an item
+breeding,2,,Eggs and egg moves
+dark-steel-types,2,,Dark and Steel types added
+abilities,3,,Every Pokemon has an ability
+natures,3,,Natures raise one stat and lower another
+physical-special-split,4,,Each move is physical or special by itself; before this the move type decided
+hidden-abilities,5,,"A third, hidden ability slot"
+reusable-tms,5,,TMs are no longer used up
+fairy-type,6,,Fairy type added; Ghost and Dark no longer resisted by Steel
+mega-evolution,6,7,Temporary in-battle evolution with a Mega Stone (returns in Legends: Z-A)
+regional-forms,7,,"Alolan, Galarian, Hisuian and Paldean variants"
+z-moves,7,7,One-per-battle Z-Moves
+hms-removed,7,,Hidden Machines removed
+dynamax,8,8,Dynamax and Gigantamax
+technical-records,8,8,Single-use TRs alongside TMs
+terastal,9,,Terastallization changes a Pokemon's type in battle

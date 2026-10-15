@@ -26,7 +26,7 @@ and `items.png` (the games' bag icons, centred on 32 px tiles, shown with crisp 
 new species or items are added.
 
 - `../pipeline/run_pipeline.sh`: clones the 21 endpoints from PokeAPI/api-data, lands them in `raw.api_response`,
-  runs `CALL mart.load`, runs `06_tests.sql` (stops and marks the batch failed if any check fails),
+  runs `dbt build` in `../dbt` (stops and marks the batch failed if any model or test fails),
   marks the batch succeeded, creates the serving views and exports JSON.
 - `../schema/08_serve.sql`: the serving layer. `serve.pokemon_card` (one row per species, today's types and stats),
   `serve.type_chart`, `serve.generation`, `serve.pipeline_run`, plus `serve.game`, `serve.game_pokedex`,

@@ -20,7 +20,7 @@ The series is organised in **generations**. Each brings new species, usually a n
 | VIII | 2019–22 | Sword/Shield (+ Isle of Armor, Crown Tundra), Brilliant Diamond/Shining Pearl, Legends: Arceus | Galar, Hisui | 96 | Dynamax/Gigantamax; TRs; overworld encounters |
 | IX | 2022– | Scarlet/Violet (+ Teal Mask, Indigo Disk), Legends: Z-A (+ Mega Dimension), Champions | Paldea | 120 | Terastallization; Stellar type |
 
-1,025 species in total. The per-generation counts above match `pokemon_species.generation` exactly, so they are now a test (`06_tests.sql`).
+1,025 species in total. The per-generation counts above match `pokemon_species.generation` exactly, so they are now a test (`dbt/tests/domain_species_per_generation.sql`).
 
 **Version vs version group.** Games come in pairs ("versions": Red and Blue) that share almost all data, so PokeAPI groups them into a **version group** (`red-blue`). Learnsets, machines and evolution rules hang off the version group; encounters and held items differ by version and hang off the version. There are 53 versions in 32 version groups.
 
@@ -158,4 +158,4 @@ PokeAPI records history in four different shapes, and each needs its own treatme
 | Stellar, ??? and Shadow aren't battle types | `dim_type.type_role`; type chart is 15/17/18 types |
 | Regional and form-specific evolutions | `fact_evolution.from_pokemon_key`, `to_pokemon_key`, `region_code` |
 | Coverage stops at Sword/Shield | `dim_version_group.has_encounter_data`, `has_learnset_data` |
-| Everything above can be checked by a player | domain tests in `06_tests.sql` |
+| Everything above can be checked by a player | domain tests in `dbt/tests/domain_*.sql` |

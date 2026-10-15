@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      The landing layer, owned by schema/01_raw.sql and filled by
+      schema/tools/land.sql. Every API response as received, as JSONB,
+      append-only with hash change detection. dbt only reads it.
+      01_raw.sql also defines raw.url_id(url), which turns a PokeAPI URL such
+      as .../version-group/5/ into the integer 5; staging uses it throughout.
+    schema: raw
+    tables:
+      - name: api_response
+        description: One row per endpoint x resource x payload version.
+        columns:
+          - name: response_id
+            data_tests: [unique, not_null]
+      - name: current_response
+        description: View over api_response with only the current version of each resource.
+        data_tests:
+          - unique_combination_of_columns:
+              arguments:
+                combination_of_columns: [endpoint, resource_id]
