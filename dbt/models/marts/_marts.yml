@@ -1,0 +1,468 @@
+version: 2
+
+# Star schema. Each model states its grain; the primary key on every table
+# (macros/primary_key.sql) enforces it when the table is written. Foreign
+# keys are checked by the relationships tests below, and the
+# not_unknown_member tests flag fact rows that fell back to the Unknown
+# member (key 0) because a dimension row was missing.
+
+models:
+  - name: dim_generation
+    description: "One row per generation (I to IX), plus the Unknown member (key 0)."
+    columns:
+      - name: generation_key
+        data_tests: [unique, not_null]
+  - name: dim_version_group
+    description: "One row per version group = one game release (often a pair of versions: Red and Blue)."
+    columns:
+      - name: version_group_key
+        data_tests: [unique, not_null]
+      - name: game_category
+        description: From the version_group_info seed. NULL means a new game is missing from the seed.
+        data_tests:
+          - not_null:
+              config:
+                where: version_group_key <> 0
+  - name: dim_version
+    description: "One row per individual game version (red, blue, ...)."
+    columns:
+      - name: version_key
+        data_tests: [unique, not_null]
+  - name: dim_pokedex
+    description: "One row per Pokédex (national, kanto, paldea, kitakami, ...)."
+    columns:
+      - name: pokedex_key
+        data_tests: [unique, not_null]
+  - name: dim_type
+    description: "One row per type: the 18 battle types plus stellar (Tera only), unknown (???) and shadow (Colosseum/XD)."
+    columns:
+      - name: type_key
+        data_tests: [unique, not_null]
+  - name: dim_stat
+    description: "One row per stat: hp, attack, defense, special-attack, special-defense, speed, the battle-only accuracy and evasion, and the generation-I-only special."
+    columns:
+      - name: stat_key
+        data_tests: [unique, not_null]
+  - name: dim_ability
+    description: "One row per ability."
+    columns:
+      - name: ability_key
+        data_tests: [unique, not_null]
+  - name: dim_move
+    description: "One row per move per ERA (a range of version groups in which the move behaved the same)."
+    columns:
+      - name: move_key
+        data_tests: [unique, not_null]
+      - name: move_id
+        description: Durable key, the same for every era of one move.
+        data_tests: [not_null]
+  - name: dim_item
+    description: "One row per item."
+    columns:
+      - name: item_key
+        data_tests: [unique, not_null]
+  - name: dim_location_area
+    description: "One row per location area; location and region flattened in."
+    columns:
+      - name: location_area_key
+        data_tests: [unique, not_null]
+  - name: dim_species
+    description: "One row per species (the 'Pokédex entry': Raticate)."
+    columns:
+      - name: species_key
+        data_tests: [unique, not_null]
+  - name: dim_pokemon
+    description: "One row per pokemon = one battle-relevant variety of a species."
+    columns:
+      - name: pokemon_key
+        data_tests: [unique, not_null]
+  - name: dim_learn_method
+    description: "One row per move learn method (level-up, machine, egg, tutor, plus game-specific ones such as xd-shadow)."
+    columns:
+      - name: learn_method_key
+        data_tests: [unique, not_null]
+  - name: dim_encounter_method
+    description: "One row per encounter method (walk, surf, old-rod, gift, overworld, max-raid, ...)."
+    columns:
+      - name: encounter_method_key
+        data_tests: [unique, not_null]
+  - name: dim_encounter_condition_set
+    description: "Junk dimension: one row per distinct combination of encounter condition values, e.g. season-winter,time-night."
+    columns:
+      - name: condition_set_key
+        data_tests: [unique, not_null]
+  - name: dim_evolution_trigger
+    description: "One row per evolution trigger (level-up, trade, use-item, shed, spin, three-critical-hits, agile-style-move, gimmighoul-coins, ...)."
+    columns:
+      - name: evolution_trigger_key
+        data_tests: [unique, not_null]
+  - name: bridge_version_group_pokedex
+    description: "One row per version group x Pokédex it uses."
+    columns:
+      - name: version_group_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version_group')
+                field: version_group_key
+      - name: pokedex_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokedex')
+                field: pokedex_key
+  - name: bridge_version_group_region
+    description: "One row per version group x region it takes place in."
+    columns:
+      - name: version_group_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version_group')
+                field: version_group_key
+  - name: fact_pokemon_move
+    description: "One row per pokemon x move x version_group x learn_method x level."
+    columns:
+      - name: pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+          - not_unknown_member
+      - name: move_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_move')
+                field: move_key
+          - not_unknown_member
+      - name: version_group_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version_group')
+                field: version_group_key
+          - not_unknown_member
+      - name: learn_method_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_learn_method')
+                field: learn_method_key
+          - not_unknown_member
+  - name: fact_pokemon_stat
+    description: "One row per pokemon x stat x stat-era."
+    columns:
+      - name: pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+          - not_unknown_member
+      - name: stat_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_stat')
+                field: stat_key
+          - not_unknown_member
+  - name: fact_encounter
+    description: "One encounter slot = location_area x pokemon x version x slot_seq."
+    columns:
+      - name: location_area_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_location_area')
+                field: location_area_key
+          - not_unknown_member
+      - name: pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+          - not_unknown_member
+      - name: version_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version')
+                field: version_key
+          - not_unknown_member
+      - name: encounter_method_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_encounter_method')
+                field: encounter_method_key
+          - not_unknown_member
+      - name: condition_set_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_encounter_condition_set')
+                field: condition_set_key
+  - name: fact_pokemon_held_item
+    description: "One row per pokemon x item x version."
+    columns:
+      - name: pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+      - name: item_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_item')
+                field: item_key
+      - name: version_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version')
+                field: version_key
+  - name: fact_evolution
+    description: "One row per evolution condition = chain x to_species x detail_seq."
+    columns:
+      - name: to_species_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_species')
+                field: species_key
+          - not_unknown_member
+      - name: from_species_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_species')
+                field: species_key
+          - not_unknown_member
+      - name: from_pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+          - not_unknown_member
+      - name: to_pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+          - not_unknown_member
+      - name: evolution_trigger_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_evolution_trigger')
+                field: evolution_trigger_key
+      - name: version_group_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version_group')
+                field: version_group_key
+      - name: used_item_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_item')
+                field: item_key
+      - name: held_item_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_item')
+                field: item_key
+      - name: known_move_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_move')
+                field: move_key
+      - name: used_move_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_move')
+                field: move_key
+      - name: known_move_type_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_type')
+                field: type_key
+      - name: party_type_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_type')
+                field: type_key
+      - name: trade_species_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_species')
+                field: species_key
+      - name: party_species_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_species')
+                field: species_key
+  - name: fact_pokemon_type
+    description: "One row per pokemon x slot x type-era."
+    columns:
+      - name: pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+      - name: type_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_type')
+                field: type_key
+  - name: fact_pokemon_ability
+    description: "One row per pokemon x ability slot x era."
+    columns:
+      - name: pokemon_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokemon')
+                field: pokemon_key
+      - name: ability_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_ability')
+                field: ability_key
+  - name: fact_pokedex_entry
+    description: "One row per species x Pokédex."
+    columns:
+      - name: species_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_species')
+                field: species_key
+      - name: pokedex_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pokedex')
+                field: pokedex_key
+  - name: fact_species_flavor_text
+    description: "One row per species x game version: the Pokédex entry text that version shows."
+    columns:
+      - name: species_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_species')
+                field: species_key
+          - not_unknown_member
+      - name: version_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version')
+                field: version_key
+          - not_unknown_member
+  - name: fact_machine
+    description: "One row per machine item x version group."
+    columns:
+      - name: item_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_item')
+                field: item_key
+          - not_unknown_member
+      - name: version_group_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_version_group')
+                field: version_group_key
+          - not_unknown_member
+      - name: move_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_move')
+                field: move_key
+          - not_unknown_member
+  - name: fact_type_effectiveness
+    description: "One row per attacking type x defending type x generation, for every pair of STANDARD types that exist in that generation (15 types in gen I, 17 in II-V, 18 from VI)."
+    columns:
+      - name: attacking_type_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_type')
+                field: type_key
+      - name: defending_type_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_type')
+                field: type_key
+  - name: pokemon_profile
+    description: "One row per pokemon, CURRENT stats only."
+  - name: move_in_version_group
+    description: "One row per move x version group: the move exactly as it worked in that game."

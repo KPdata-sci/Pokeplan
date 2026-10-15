@@ -1,0 +1,31 @@
+# SCD type 2 for moves, kept by dbt.
+#
+# A move has two timelines, and this table holds both:
+#   * GAME time: the eras (valid_from_order .. valid_to_order on the version
+#     group release order). Bite is Normal in Red/Blue and Dark from
+#     Gold/Silver. These come from the data itself (stg_move_era), so a
+#     snapshot cannot produce them; they are columns of the row.
+#   * LOAD time: dbt_valid_from .. dbt_valid_to. Each pipeline run compares
+#     every era row with the newest copy here. A row whose values changed
+#     (PokeAPI corrected a move's power, or reworded its effect) gets closed
+#     and a new version opened; an era that disappeared from the source is
+#     closed too (hard_deletes: invalidate). Nothing is ever overwritten.
+#
+# dim_move is the current version of every era (dbt_valid_to IS NULL).
+# To see what the warehouse believed on a given day:
+#   SELECT * FROM snapshots.move_era_snapshot
+#   WHERE '2026-10-15' >= dbt_valid_from
+#     AND ('2026-10-15' < dbt_valid_to OR dbt_valid_to IS NULL);
+snapshots:
+  - name: move_era_snapshot
+    relation: ref('int_move_era')
+    description: Every version of every move era the pipeline has seen.
+    config:
+      schema: snapshots
+      unique_key: move_key
+      strategy: check
+      check_cols: all
+      hard_deletes: invalidate
+    columns:
+      - name: dbt_scd_id
+        data_tests: [unique]

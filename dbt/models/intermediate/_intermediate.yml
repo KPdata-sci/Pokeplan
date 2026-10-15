@@ -1,0 +1,8 @@
+version: 2
+
+models:
+  - name: int_move_era
+    description: "Grain: one row per move per era, dim_move-ready. The input of move_era_snapshot."
+    columns:
+      - name: move_key
+        data_tests: [unique, not_null]

@@ -1,6 +1,6 @@
 -- Serving layer: the views the dashboard reads. One view per dashboard dataset,
 -- built only from mart tables, so the dashboard never touches raw or staging.
--- Run after CALL mart.load(...) and 06_tests.sql.
+-- Run after dbt build (see ../dbt), which creates the mart tables and tests them.
 
 CREATE SCHEMA IF NOT EXISTS serve;
 

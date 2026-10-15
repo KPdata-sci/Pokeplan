@@ -1,0 +1,4 @@
+stat_code,valid_from_generation,valid_to_generation
+special,1,1
+special-attack,2,99
+special-defense,2,99

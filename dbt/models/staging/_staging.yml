@@ -1,0 +1,169 @@
+version: 2
+
+# Staging: one view per GRAIN (not per endpoint), created as stg.<grain>.
+# Each view flattens one nested JSON list. The grain tests below are the
+# first line of defence: if one fails, an assumption about the SOURCE broke,
+# and the failing view tells you which one.
+
+models:
+  - name: stg_generation
+    description: "Grain: one row per generation."
+    columns:
+      - name: generation_id
+        data_tests: [unique, not_null]
+  - name: stg_version_group
+    description: "Grain: one row per version group."
+    columns:
+      - name: version_group_id
+        data_tests: [unique, not_null]
+  - name: stg_version_group_region
+    description: "Grain: version group x region (HeartGold/SoulSilver visit two regions)."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [version_group_id, region_id]
+  - name: stg_version_group_pokedex
+    description: "Grain: version group x pokedex (which regional dexes a game uses)."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [version_group_id, pokedex_id]
+  - name: stg_version
+    description: "Grain: one row per version."
+    columns:
+      - name: version_id
+        data_tests: [unique, not_null]
+  - name: stg_pokedex
+    description: "Grain: one row per pokedex (national, kanto, paldea, ...)."
+    columns:
+      - name: pokedex_id
+        data_tests: [unique, not_null]
+  - name: stg_type
+    description: "Grain: one row per type."
+    columns:
+      - name: type_id
+        data_tests: [unique, not_null]
+  - name: stg_stat
+    description: "Grain: one row per stat."
+    columns:
+      - name: stat_id
+        data_tests: [unique, not_null]
+  - name: stg_ability
+    description: "Grain: one row per ability."
+    columns:
+      - name: ability_id
+        data_tests: [unique, not_null]
+  - name: stg_move
+    description: "Grain: one row per move, CURRENT values."
+    columns:
+      - name: move_id
+        data_tests: [unique, not_null]
+  - name: stg_move_change
+    description: "Grain: move x version group in which some of its values CHANGED."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [move_id, changed_in_version_group_id]
+  - name: stg_move_era
+    description: "Grain: move x era."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [move_id, valid_from_order]
+  - name: stg_machine
+    description: "Grain: one row per machine = one TM/HM/TR item in one version group."
+    columns:
+      - name: machine_id
+        data_tests: [unique, not_null]
+  - name: stg_item
+    description: "Grain: one row per item."
+    columns:
+      - name: item_id
+        data_tests: [unique, not_null]
+  - name: stg_location_area
+    description: "Grain: one row per location area."
+    columns:
+      - name: location_area_id
+        data_tests: [unique, not_null]
+  - name: stg_species
+    description: "Grain: one row per species."
+    columns:
+      - name: species_id
+        data_tests: [unique, not_null]
+  - name: stg_species_flavor_text
+    description: "Grain: species x version."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [species_id, version_id]
+  - name: stg_pokedex_entry
+    description: "Grain: species x pokedex."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [species_id, pokedex_id]
+  - name: stg_pokemon
+    description: "Grain: one row per pokemon."
+    columns:
+      - name: pokemon_id
+        data_tests: [unique, not_null]
+  - name: stg_pokemon_form
+    description: "Grain: one row per pokemon form."
+    columns:
+      - name: form_id
+        data_tests: [unique, not_null]
+  - name: stg_lookup
+    description: "Grain: one row per (endpoint, resource)."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [endpoint, lookup_id]
+  - name: stg_encounter_condition_value
+    description: "Grain: one row per encounter condition value."
+    columns:
+      - name: condition_value_id
+        data_tests: [unique, not_null]
+  - name: stg_pokemon_move
+    description: "Grain: pokemon x move x version_group x learn_method x level."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [pokemon_id, move_id, version_group_id, learn_method_id, level_learned_at]
+  - name: stg_pokemon_stat
+    description: "Grain: pokemon x stat x stat-era."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [pokemon_id, stat_id, valid_from_generation_id]
+  - name: stg_pokemon_type
+    description: "Grain: pokemon x slot x type-era."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [pokemon_id, slot, valid_from_generation_id]
+  - name: stg_pokemon_ability
+    description: "Grain: pokemon x ability slot x era."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [pokemon_id, slot, valid_from_generation_id]
+  - name: stg_pokemon_held_item
+    description: "Grain: pokemon x item x version."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [pokemon_id, item_id, version_id]
+  - name: stg_encounter
+    description: "Grain: one encounter slot = location area x pokemon x version x position in encounter_details."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [location_area_id, pokemon_id, version_id, slot_seq]
+  - name: stg_type_damage
+    description: "Grain: attacking type x defending type x era."
+  - name: stg_evolution
+    description: "Grain: one evolution condition = evolution chain x to_species x position in evolution_details."
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [evolution_chain_id, to_species_id, detail_seq]

@@ -3,7 +3,7 @@
 --   psql -X -v csv=/full/path/raw.csv [-v notes='...'] -f land.sql
 --
 -- Needs 01_raw.sql applied. Prints the new batch_id last, so a script can
--- capture it and pass it on to CALL mart.load(batch_id).
+-- capture it and pass it on to dbt build --vars "{batch_id: N}".
 --
 -- Safe to rerun (idempotent): a resource only gets a new row when its payload
 -- hash differs from its current version. That row becomes the current one and

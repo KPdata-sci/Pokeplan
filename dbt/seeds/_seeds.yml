@@ -1,0 +1,82 @@
+version: 2
+
+# Reference data: domain knowledge the API does not carry (when mechanics
+# arrived, which games are remakes or DLC, how to read encounter chances).
+# Written down once, as data, and loaded into schema ref by `dbt seed`.
+# Sources: Bulbapedia and PokeAPI's own CSV data, checked 2026-10-08; the
+# reasoning is in domain/pokemon_domain_notes.md.
+
+seeds:
+  - name: generation_info
+    description: One row per generation, with release window, platform and how many species it added (a check value for the tests).
+    config:
+      column_types: {generation_number: smallint, roman: text, first_release_year: smallint, last_release_year: smallint, platform: text, new_species: smallint}
+    columns:
+      - name: generation_number
+        data_tests: [unique, not_null]
+
+  - name: mechanic
+    description: One row per game mechanic the model depends on. History is clamped with these (no abilities before generation 3).
+    config:
+      column_types: {mechanic_code: text, introduced_generation: smallint, retired_generation: smallint, description: text}
+    columns:
+      - name: mechanic_code
+        data_tests: [unique, not_null]
+
+  - name: version_group_info
+    description: One row per version group. PokeAPI knows the generation; it does not know which games are remakes, DLC, spin-offs or Japan-only.
+    config:
+      column_types: {version_group_code: text, release_year: smallint, game_category: text, base_version_group_code: text, remake_of_generation: smallint}
+    columns:
+      - name: version_group_code
+        data_tests: [unique, not_null]
+      - name: game_category
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [core, enhanced, remake, dlc, spin-off, japan-only]
+
+  - name: type_role
+    description: Types that never appear on a Pokémon's own typing in the main games. Every other type is 'standard'.
+    config:
+      column_types: {type_code: text, type_role: text}
+    columns:
+      - name: type_code
+        data_tests: [unique]
+      - name: type_role
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [standard, tera-only, non-battle]
+
+  - name: form_rule
+    description: >
+      Form patterns applied in priority order to a Pokémon's code (first match
+      wins). No match means 'default' for the species' default variety, else
+      'battle-only' when the API flags the form so, else 'alternate'.
+    config:
+      column_types: {priority: smallint, code_pattern: text, form_category: text, region_code: text}
+    columns:
+      - name: priority
+        data_tests: [unique]
+
+  - name: encounter_method_rule
+    description: >
+      Groups the encounter methods and says what an encounter's chance means:
+      percent (classic tables, add up to 100), weight (overworld spawns and
+      raids) or n/a (gifts, static encounters, trades, roamers).
+    config:
+      column_types: {priority: smallint, code_pattern: text, method_group: text, chance_unit: text}
+    columns:
+      - name: priority
+        data_tests: [unique]
+      - name: chance_unit
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [percent, weight, n/a]
+
+  - name: stat_validity
+    description: Stats that existed for only part of the timeline. Generation I had one Special stat; generation II split it in two. 99 = still current.
+    config:
+      column_types: {stat_code: text, valid_from_generation: smallint, valid_to_generation: smallint}

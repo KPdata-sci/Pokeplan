@@ -29,12 +29,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dbt/requirements.txt
+
+      - name: Install dbt
+        run: pip install -r dbt/requirements.txt
+
       # Keep the api-data clone between the two runs (the runner context is
       # not available in job-level env, so set WORK here).
       - name: Set work folder
         run: mkdir -p "$RUNNER_TEMP/pokeplan" && echo "WORK=$RUNNER_TEMP/pokeplan" >> "$GITHUB_ENV"
 
-      - name: First run (extract, land, transform, test, serve)
+      - name: First run (extract, land, dbt build, serve)
         run: bash pipeline/run_pipeline.sh
 
       - name: Second run must land nothing new
@@ -44,6 +53,10 @@ jobs:
             "SELECT status, rows_fetched, rows_changed FROM etl.load_batch ORDER BY batch_id DESC LIMIT 1")
           echo "last batch: status=$status fetched=$fetched changed=$changed"
           test "$status" = succeeded && test "$fetched" -gt 0 && test "$changed" -eq 0
+          # Same data, so the moves snapshot must not have closed any version.
+          closed=$(psql -XAt -c "SELECT count(*) FROM snapshots.move_era_snapshot WHERE dbt_valid_to IS NOT NULL")
+          echo "move_era_snapshot closed versions: $closed"
+          test "$closed" -eq 0
 
       - name: Dashboard builds from the fresh data
         run: python3 dashboard/build_dashboard.py "$RUNNER_TEMP/pokedex_dashboard.html"

@@ -2,15 +2,19 @@
 # Runs the whole local pipeline end to end and writes dashboard/dashboard_data.json.
 #   extract   sparse-clone PokeAPI/api-data (the 21 endpoints staging reads)
 #   land      dump to CSV, then schema/tools/land.sql (only new or changed rows)
-#   transform CALL mart.load(batch)
-#   test      06_tests.sql; any failing check stops the run
+#   transform dbt build: seeds, staging views, the moves snapshot, mart
+#             tables, and every test; an error or failing test stops the run
 #   serve     schema/08_serve.sql views, then export JSON for the dashboard
-# Needs: git, python3, psql pointed at a database via PG* env vars.
+# Needs: git, python3, psql pointed at a database via PG* env vars, and dbt
+# (pip install -r dbt/requirements.txt; set DBT=/path/to/dbt if it is not on PATH).
+# dbt reads the same PG* variables (dbt/profiles.yml).
 # Safe to rerun: an unchanged dump lands no new raw rows.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 schema="$root/schema"
 dashboard="$root/dashboard"
+dbt_dir="$root/dbt"
+dbt=${DBT:-dbt}
 work=${WORK:-$(mktemp -d)}
 export PGOPTIONS="${PGOPTIONS:-} -c client_min_messages=warning"  # hide 'already exists' notices on reruns
 psql_() { psql -v ON_ERROR_STOP=1 -q "$@"; }
@@ -26,10 +30,9 @@ if [ ! -d "$work/api-data" ]; then
 fi
 commit=$(git -C "$work/api-data" rev-parse --short HEAD)
 
-if ! psql -Atqc "select 1 from pg_namespace where nspname='mart'" | grep -q 1; then
-  echo "setup: creating schema"
-  for f in 01_raw 02_reference 03_staging 04_marts 05_load; do psql_ -f "$schema/$f.sql" >/dev/null; done
-fi
+# The raw layer (landing table, batch log) is plain SQL; everything after it
+# is the dbt project. 01_raw.sql only creates what is missing.
+psql_ -f "$schema/01_raw.sql" >/dev/null
 
 echo "land: dumping JSON to CSV"
 python3 -I "$schema/tools/dump_to_csv.py" "$work/api-data/data/api/v2" "$work/raw.csv"
@@ -39,14 +42,13 @@ batch=$(psql_ -X -At -v csv="$work/raw.csv" -v notes="api-data $commit" -f "$sch
 mark_failed() { psql_ -c "UPDATE etl.load_batch SET status='failed', finished_at=now() WHERE batch_id=$batch AND status='running'"; }
 trap mark_failed EXIT
 
-echo "transform: mart.load($batch)"
-psql_ -c "CALL mart.load($batch)"
-
-echo "test: 06_tests.sql"
-# Sections 1-4 must return no rows; the last two queries are warnings by design.
-failures=$(psql -q -v ON_ERROR_STOP=1 -f "$schema/06_tests.sql" | grep -o '([0-9]* rows\?)' | head -n -2 | grep -vc '(0 rows)' || true)
-if [ "$failures" != "0" ]; then
-  echo "test: $failures checks failed; dashboard not refreshed" >&2; exit 1
+echo "transform + test: dbt build (batch $batch)"
+# Builds in dependency order and tests each model right after it is built, so
+# a failing test skips everything downstream of it. The two warning tests
+# (known source-data quirks) never stop the run.
+if ! "$dbt" build --project-dir "$dbt_dir" --profiles-dir "$dbt_dir" \
+        --vars "{batch_id: $batch}"; then
+  echo "transform + test: dbt build failed; dashboard not refreshed" >&2; exit 1
 fi
 psql_ -c "UPDATE etl.load_batch SET status='succeeded', finished_at=now() WHERE batch_id=$batch"
 
